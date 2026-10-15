@@ -1,11 +1,11 @@
 # Designdateien (BdKEP)
 
-Hier ablegen (Details siehe Vorgabe, Abschnitt 4):
+Quelle: BdKEP Design System (claude.ai), gemeinsame Grundlage aller BdKEP-Dashboards (Hub, Sekretariat, Aufgaben, Finanzcockpit).
 
-- Logo (SVG/PNG)
-- Farbwerte, Schriftarten bzw. E-Mail-sichere Ersatzschriften
-- vorhandene HTML- oder Word-Vorlage
-- Beispiel eines früheren Newsletters
+- `tokens.json` – Farben, Schrift, Abstände, Logo-Pfade, Fußtext (zentrale Werte für Export, Stufe 5)
+- `colors.css`, `typography.css`, `spacing.css` – Original-Tokens des Design Systems
+- `logo/` – Logos (kurz/voll, hell/invers); Regeln: nie auf weißem Feld, Mindesthöhe 24 px (kurz) bzw. 64 px (voll)
+- `beispiel-newsletter-2026-09-30.html` – bisheriger Newsletter als Vorlage für `newsletter-template.html` (Stufe 5)
 
-Daraus entstehen in Stufe 5 `tokens.json` und `newsletter-template.html`.
-Es wird kein Design erfunden.
+Die Oberfläche (`app/static/style.css`) nutzt dieselben Werte; Dunkelmodus folgt der Systemeinstellung.
+Noch offen für Stufe 5: Vorlage mit Platzhaltern, Rechtspflichtangaben im Fuß, Bild-Hosting.

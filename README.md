@@ -45,7 +45,7 @@ Alles liegt unter `data/` (`newsletter.db` und `files/` mit den Originaldateien)
 
 ## Design
 
-Designdateien gehören nach `design/` (siehe `design/README.md`). Sie fehlen noch und werden vor Stufe 5 benötigt.
+Die Oberfläche folgt dem BdKEP Design System (gleiche Tokens wie Hub, Sekretariat, Aufgaben). Designdateien liegen in `design/` (siehe `design/README.md`).
 
 ## Tests
 

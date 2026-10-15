@@ -1,0 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;0,800;1,700&family=Carlito:wght@400;700&display=swap');
+:root{--font-slides:Calibri,Carlito,Arial,sans-serif;/* @kind font */--slide-fs-small:22px;/* @kind other */--slide-fs-body:28px;/* @kind other */--slide-fs-sub:44px;/* @kind other */--slide-fs-title:60px;/* @kind other */--slide-fs-display:104px;/* @kind other */--font-sans:'Open Sans','Noto Sans',system-ui,sans-serif;--font-display:var(--font-sans);
+--fs-xs:12px;--fs-sm:14px;--fs-md:16px;--fs-lg:20px;--fs-xl:28px;--fs-2xl:40px;--fs-3xl:56px;--fs-4xl:80px;
+--fw-regular:400;/* @kind other */--fw-semibold:600;/* @kind other */--fw-bold:700;/* @kind other */--fw-extrabold:800;/* @kind other */--lh-tight:1.1;/* @kind other */--lh-snug:1.3;/* @kind other */--lh-body:1.55;/* @kind other */--ls-caps:.08em}
+body{font-family:var(--font-sans);color:var(--text-body);line-height:var(--lh-body)}
+a{color:var(--navy-700)}a:hover{color:var(--gold-700)}

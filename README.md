@@ -1,54 +1,28 @@
 # Newsletter-Dashboard BdKEP
 
-Lokale Web-Anwendung: Inhalte sammeln, auf Ausgaben verteilen, Kurztexte erstellen und einen HTML-Newsletter im BdKEP-Design zusammensetzen. Arbeitsgrundlage ist die Vorgabe `newsletter-dashboard-vorgabe.md`. Kein Versand aus dem Dashboard.
+Dashboard zum Sammeln von Quellen, Verteilen auf Ausgaben, Schreiben von Kurztexten und Zusammensetzen des HTML-Newsletters im BdKEP-Design. Fachliche Vorgabe: `newsletter-dashboard-vorgabe.md`.
+
+**Live:** <https://claude.ai/artifact/SpfH3AWEaBy4SDy7thYrD5> (privat; Freigabe über das Teilen-Menü der Seite)
+
+## Aufbau
+
+Wie Hub, Sekretariat und Aufgaben: eine Artifact-Seite mit Artifact-Datenbank. `dashboard/newsletter.html` ist die Quelle der Seite (Logos als Platzhalter, die Veröffentlichung setzt sie aus `design/logo/` ein). Design: `design/` (Tokens, Logos, Beispiel-Newsletter), Stilvorgaben für Texte: `style.md`.
+
+Datenbank-Sammlungen (Artifact-DB):
+- `quellen`: typ (`mail|note|link|document|image`), titel, text, url, mailBetreff, mailAbsender, mailDatum, quelle (`mail|hand`), erfasstAm, erfasstVon
+- folgen mit den nächsten Stufen: `themen`, `ausgaben`, `textbausteine`
+
+## Mailabruf
+
+Geplante Aufgabe „Newsletter: Mail-Abruf in die Inbox (23:45)“, täglich 23:45 Uhr Europe/Berlin. Sie liest über den Gmail-Connector Mails an `aschumann.bdkep+news@gmail.com` (nur lesen) und legt sie als `quellen/m-<Gmail-ID>` ab. Doppelte Abrufe sind ausgeschlossen.
 
 ## Stand
 
 | Stufe | Inhalt | Status |
 |---|---|---|
-| 1 | Gerüst, Datenmodell, Start-Skript, README | fertig |
-| 2 | Inbox (alle Quelltypen) inkl. täglichem Mailabruf 23:45 (Abschnitt 3.1a der Vorgabe) | offen |
+| 1 | Gerüst, Datenmodell | fertig |
+| 2 | Inbox: Notiz, Link, Mail, Textdatei (.txt, .md, .eml), Mailabruf | fertig, offen: docx, pdf, msg, Bilder, Link-Abruf |
 | 3 | Themenkarten und Board | offen |
-| 4 | Textbausteine, API-Erzeugung | offen |
-| 5 | Design und Export | offen (Designdateien nötig) |
+| 4 | Textbausteine | offen |
+| 5 | Export | offen |
 | 6 | Prüfung | offen |
-
-## Technikwahl
-
-Python mit FastAPI und SQLite (Standardbibliothek `sqlite3`, kein ORM), Frontend als statische Seiten ohne Build-System. Wenige Abhängigkeiten, ein Befehl zum Start, alle Daten in einem Ordner.
-
-## Installation und Start
-
-Voraussetzung: Python 3.10 oder neuer.
-
-```
-./start.sh
-```
-
-Das Skript legt beim ersten Start `.venv` an, installiert die Pakete und startet den Server unter <http://127.0.0.1:8000>. Anderer Port: `PORT=8080 ./start.sh`.
-
-## Konfiguration (Umgebungsvariablen)
-
-| Variable | Bedeutung | Standard |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | Schlüssel für die Texterzeugung (optional, nie in Dateien ablegen) | nicht gesetzt |
-| `ANTHROPIC_MODEL` | Modell für Textbausteine | `claude-sonnet-5-5` |
-| `NEWSLETTER_DATA_DIR` | Datenordner | `./data` |
-| `IMAGE_BASE_URL` | Basis-Pfad für Bild-URLs im Export | Platzhalter |
-| `TEXT_WORDS_MIN` / `TEXT_WORDS_MAX` | Richtwert Kurztext | 40 / 80 |
-
-Ohne API-Schlüssel startet die Anwendung vollständig; alle Texte werden dann manuell geschrieben. Stilvorgaben für die Erzeugung stehen in `style.md`.
-
-## Daten und Sicherung
-
-Alles liegt unter `data/` (`newsletter.db` und `files/` mit den Originaldateien). Sicherung: Anwendung beenden und den Ordner `data/` kopieren oder als ZIP ablegen. `data/` ist nicht im Git-Repository.
-
-## Design
-
-Die Oberfläche folgt dem BdKEP Design System (gleiche Tokens wie Hub, Sekretariat, Aufgaben). Designdateien liegen in `design/` (siehe `design/README.md`).
-
-## Tests
-
-```
-.venv/bin/pytest
-```

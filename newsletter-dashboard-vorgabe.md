@@ -30,10 +30,9 @@ Arbeitsgrundlage für Claude Code. Ziel ist eine lokal lauffähige Web-Anwendung
 
 ### 3.1a Automatischer Mailabruf (Ergänzung des Auftraggebers)
 - Mails, die an `aschumann.bdkep+news@gmail.com` gehen, werden täglich um 23:45 Uhr (Europe/Berlin) abgerufen und als Quelle vom Typ `mail` in der Inbox abgelegt.
-- Abruf per IMAP; Zugangsdaten nur über Umgebungsvariablen (`MAIL_IMAP_USER`, `MAIL_IMAP_PASSWORD`, bei Gmail ein App-Passwort), nie im Repository.
-- Gmail liefert Mails an die Plus-Adresse im Postfach `aschumann.bdkep@gmail.com` aus; gefiltert wird auf den Empfänger `+news`.
+- Abruf über den Gmail-Connector als geplante Aufgabe (wie bei Aufgaben, Sekretariat, Finanzcockpit), kein IMAP und kein App-Passwort. Suche: `deliveredto:aschumann.bdkep+news@gmail.com`; Gmail wird nur gelesen.
+- Die Aufgabe schreibt in die Artifact-Datenbank des Dashboards (Sammlung `quellen`, Dokument-ID `m-<Gmail-Nachrichten-ID>`).
 - Bereits abgerufene Mails werden nicht doppelt angelegt (Message-ID wird gespeichert).
-- Zeitplan über den Scheduler der Anwendung oder alternativ als Cron-Befehl; Abruf ist auch manuell per Schaltfläche möglich.
 - Umsetzung in Stufe 2 zusammen mit der Inbox.
 
 ### 3.2 Themenkarten
@@ -79,6 +78,8 @@ Felder: Titel, Kurzbeschreibung, Quellen (1..n), Schlagwörter, Status (`Idee`, 
 - Der Export muss in gängigen E-Mail-Clients (Outlook-Desktop, Gmail, Apple Mail, mobile Clients) lesbar bleiben. Outlook-spezifische Besonderheiten (z. B. fehlende Unterstützung moderner CSS-Eigenschaften) werden beim Aufbau der Vorlage berücksichtigt.
 
 ## 5. Technische Rahmenbedingungen
+
+**Änderung 2026-10-15 (Auftraggeber):** Das Dashboard wird wie Hub, Sekretariat und Aufgaben als Artifact mit Artifact-Datenbank umgesetzt, nicht als lokale Python-App. Grund: der automatische Mailabruf per Gmail-Connector läuft in der Cloud und erreicht keine lokale Datenbank. Die Aussagen zu SQLite, `data/`, Start-Skript und Anthropic-API-Schlüssel unten gelten damit nicht mehr; Texterzeugung läuft über die Artifact-Funktion „Claude fragen“ (`sample`), Datensicherung über die Datenbank des Artifacts. Alle fachlichen Anforderungen bleiben.
 
 - Lokal lauffähig, ein Nutzer, kein Cloud-Zwang. Start mit einem einzigen Befehl, Anleitung in `README.md`.
 - Datenhaltung: SQLite plus Dateiablage im Projektordner (`data/`). Export/Backup als ZIP.

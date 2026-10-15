@@ -67,6 +67,14 @@ textarea{min-height:96px;resize:vertical}
 .pos .t{font-size:15px;font-weight:700;color:var(--navy);line-height:1.35;overflow-wrap:anywhere}
 .leer{margin:0;font-size:14px;color:var(--muted)}
 .hinweis-fuss{margin:0;font-size:13px;line-height:1.5;color:var(--muted)}
+.tb{border:1px solid var(--line);background:var(--bg);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.tb h4{margin:0;font-size:14px;font-weight:800;color:var(--navy)}
+.tb .zahl{font-size:12px;color:var(--muted)}.tb .zahl.aus{color:var(--crit-ink);font-weight:700}
+.tb details summary{cursor:pointer;font-size:13px;color:var(--navy);font-weight:600;min-height:32px;display:flex;align-items:center}
+.tb .ver{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;padding:6px 0;border-top:1px solid var(--line)}
+.senden{border:1px solid var(--gold);background:var(--warn-bg);padding:12px 14px;font-size:13px;line-height:1.5;color:var(--warn-ink);display:flex;flex-direction:column;gap:8px}
+.senden ul{margin:0;padding-left:18px}
+.tb-vorschau{font-size:14px;color:var(--ink)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--navy);color:#fff;padding:10px 16px;font-size:14px;max-width:90vw;border-left:4px solid var(--gold)}
 @media (max-width:520px){.sec-head,.liste,.ausgabe .inhalt{padding-left:16px;padding-right:16px}.formular{margin-left:16px;margin-right:16px}.ausgabe .kopf2{padding-left:16px;padding-right:16px}}
 </style>
@@ -85,7 +93,75 @@ function h(tag,attrs,...kids){const e=document.createElement(tag);
   for(const c of kids.flat()){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(String(c)))}return e}
 
 let db=null,canWrite=null,items=[],ausgaben=[],loaded=false,filter='alle',showNew=false,newTyp='note',newIssue=false,toastMsg='',toastT=0,busy=false;
-const openIds=new Set(),delIds=new Set(),drafts={};
+const openIds=new Set(),delIds=new Set(),drafts={},askIds=new Set(),genBusy=new Set(),vorschlagIds=new Set();
+let sample=null;
+const WORDS=t=>((t||'').trim().match(/\S+/g)||[]).length;
+const WMIN=40,WMAX=90;
+/* Stilvorgaben wie style.md; die Beispiele zeigen nur Aufbau und Ton, aus ihnen werden keine Angaben übernommen */
+const STIL=`Du schreibst Kurztexte für den Newsletter des Bundesverbands der Kurier-Express-Post-Dienste (BdKEP), auf Deutsch, Anrede der Leser: Mitglieder, Verband spricht als "wir" nur, wenn die Quelle das so tut.
+Regeln:
+- sachlich, neutral, dauerhaft gültige Formulierungen; keine Werbesprache, keine wertenden Zusätze, keine rhetorischen Fragen, keine typischen KI-Formulierungen.
+- Angaben ausschließlich aus der Quelle. Fehlt etwas, das für den Leser wichtig wäre (Datum, Ort, Frist, Link, Kontakt), schreibe an die Stelle [Angabe fehlt] und erfinde nichts.
+- Überschrift: "Thema: Kernaussage" (oder bei Terminen "Datum – Veranstaltung"), höchstens 14 Wörter, ohne Punkt am Ende, ohne Nummer.
+- Kurztext: ein bis zwei Absätze, zusammen ${WMIN} bis ${WMAX} Wörter, mit konkreten Daten (Datum mit Wochentag, Uhrzeit, Beträge, Fristen), wenn die Quelle sie nennt.
+- Nennt die Quelle einen Link, stelle ihn als reine URL ans Ende des Textes. Nennt sie eine Kontaktperson oder Kontaktdaten, füge eine Zeile "Kontakt: ..." an. Nennt sie keinen Link, aber einer wäre sinnvoll, schreibe "[Link einfügen]".
+- Hinweise des Redakteurs sind nur zur Prüfung gedacht und kommen nicht in den Text.
+Beispiele für Aufbau und Ton (Inhalte nicht übernehmen):
+Überschrift: Postgesetz: Kabinett beschließt Entwurf – Teilleistungen nicht mehr im Universaldienst
+Kurztext: Das Bundeskabinett hat am 14.10. den Entwurf zur Änderung des Postgesetzes freigegeben. Teilleistungen gehören danach nicht mehr zu den Universaldienstleistungen. Damit werden sie voraussichtlich zum 1.1.2027 wieder mehrwertsteuerpflichtig. https://www.bundeswirtschaftsministerium.de/...
+Überschrift: 28.10.2026 – 1. Münchner Radl-Logistik-Tag
+Kurztext: Am Mittwoch, 28.10.2026, findet von 11:00 bis 15:00 Uhr der 1. Münchner Radl-Logistik-Tag statt. Veranstalter ist das B2B Lastenrad Zentrum München, Kooperationspartner sind unter anderem der BdKEP und das Mobilitätsreferat München. Im Mittelpunkt stehen gewerbliche Schwerlastenräder in der KEP- und Stadtlogistik. Schwerlastenräder und E-Vans stehen für Probefahrten bereit. [Link einfügen]
+Antworte ausschließlich mit JSON: {"ueberschrift":"...","kurztext":"...","linkText":""}. linkText ist der Text für eine Schaltfläche, z. B. "Zur Anmeldung", nur wenn ein Link vorhanden ist, sonst "".`;
+const quellText=c=>[c.titel?'Titel der Quelle: '+c.titel:'',c.typ==='mail'&&c.mailBetreff?'Betreff der Mail: '+c.mailBetreff:'',c.url?'Link: '+c.url:'','Text der Quelle:\n'+(c.text||'(kein Text hinterlegt)'),c.hinweisText?'Hinweis des Redakteurs (nicht in den Text übernehmen): '+c.hinweisText:''].filter(Boolean).join('\n');
+async function erzeugen(c){
+  askIds.delete(c.id);
+  if(!sample)return toast('Die Texterzeugung ist in dieser Ansicht nicht verfügbar. Der Text lässt sich von Hand schreiben.');
+  genBusy.add(c.id);render();
+  try{
+    const r=await sample(STIL+'\n\n--- Quelle ---\n'+quellText(c),{cache:false,modelTier:'default'});
+    const m=String((r&&r.text)||'').match(/\{[\s\S]*\}/);const j=JSON.parse(m?m[0]:'');
+    drafts[c.id+'.tu']=String(j.ueberschrift||'').trim();drafts[c.id+'.tk']=String(j.kurztext||'').trim();drafts[c.id+'.tl']=String(j.linkText||'').trim();
+    vorschlagIds.add(c.id);toast('Vorschlag liegt vor. Bitte prüfen, anpassen und speichern.',5000);
+  }catch(e){toast(e&&e.code==='not_granted'?'Die Texterzeugung wurde nicht erlaubt.':'Kein Vorschlag erhalten. Bitte erneut versuchen oder von Hand schreiben.')}
+  finally{genBusy.delete(c.id);render()}
+}
+async function textSpeichern(c,f){
+  const t={ueberschrift:f.u.trim(),kurztext:f.k.trim(),linkText:f.l.trim(),durch:vorschlagIds.has(c.id)?'api':'manuell',am:new Date().toISOString(),freigegeben:false};
+  if(!t.ueberschrift&&!t.kurztext)return toast('Bitte Überschrift oder Kurztext eintragen.');
+  const ver=[...(c.tbVersionen||[]),...(c.tb?[c.tb]:[])].slice(-20);
+  const ok=await upd(c,{tb:t,tbVersionen:ver},'Text gespeichert. Die Freigabe ist zurückgesetzt.');
+  if(ok){['tu','tk','tl'].forEach(k=>delete drafts[c.id+'.'+k]);vorschlagIds.delete(c.id);render()}
+}
+const textFreigabe=(c,v)=>upd(c,{tb:{...c.tb,freigegeben:v}},v?'Text freigegeben.':'Freigabe zurückgenommen.');
+const textZurueck=(c,i)=>{const ver=(c.tbVersionen||[]).slice(),w=ver.splice(i,1)[0];if(c.tb)ver.push(c.tb);return upd(c,{tb:{...w,freigegeben:false},tbVersionen:ver.slice(-20)},'Frühere Fassung wiederhergestellt, Freigabe zurückgesetzt.')};
+function textPanel(c){
+  const dk=(k,d)=>drafts[c.id+'.'+k]!==undefined?drafts[c.id+'.'+k]:d,tb=c.tb||{};
+  const mk=(k,v)=>e=>{drafts[c.id+'.'+k]=e.target.value;if(k==='tk'){const z=document.getElementById('z-'+c.id);if(z){const n=WORDS(e.target.value);z.textContent=n+' Wörter (Richtwert '+WMIN+' bis '+WMAX+')';z.className='zahl'+(n>WMAX*1.2||(n&&n<WMIN*.6)?' aus':'')}}};
+  const tu=h('input',{id:'tu-'+c.id,oninput:mk('tu')});tu.value=dk('tu',tb.ueberschrift||'');
+  const tk=h('textarea',{id:'tk-'+c.id,style:'min-height:150px',oninput:mk('tk')});tk.value=dk('tk',tb.kurztext||'');
+  const tl=h('input',{id:'tl-'+c.id,oninput:mk('tl'),placeholder:'z. B. Zur Anmeldung (nur mit Link)'});tl.value=dk('tl',tb.linkText||'');
+  const n=WORDS(tk.value),read=()=>({u:dk('tu',tb.ueberschrift||''),k:dk('tk',tb.kurztext||''),l:dk('tl',tb.linkText||'')});
+  const w=h('div',{class:'tb'},h('div',{class:'zeile'},h('h4',{},'Newsletter-Text'),
+    c.tb?h('span',{class:'badge',style:tb.freigegeben?'background:#E1F1E9;color:#1E5A40':'background:#FFF6DD;color:#4A3608'},tb.freigegeben?'Freigegeben':'Entwurf'):h('span',{class:'badge',style:'background:#E8EBEF;color:#2B3440'},'Noch kein Text'),
+    c.tb?h('span',{class:'muted'},(tb.durch==='api'?'Vorschlag von Claude, bearbeitet':'von Hand')+' · '+dat(tb.am,true)):null));
+  if(vorschlagIds.has(c.id))w.append(h('div',{class:'warn warn-k'},h('strong',{},'Vorschlag von Claude, noch nicht gespeichert.'),' Alle Angaben bitte mit der Quelle abgleichen. Stellen mit [Angabe fehlt] oder [Link einfügen] ergänzen.'));
+  if(canWrite!==false){
+    if(askIds.has(c.id))w.append(h('div',{class:'senden'},h('strong',{},'Das wird an Claude gesendet:'),
+      h('ul',{},h('li',{},'Titel und Text dieser Quelle ('+(c.text||'').length+' Zeichen)'),c.url?h('li',{},'der Link der Quelle'):null,c.typ==='mail'&&c.mailBetreff?h('li',{},'der Betreff der Mail'):null,c.hinweisText?h('li',{},'dein Hinweistext (nur zur Prüfung)'):null),
+      h('div',{},'Nicht gesendet: Absender der Mail. Enthält der Text Namen oder Adressen, gehen sie mit.'),
+      h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>erzeugen(c)},'Jetzt senden'),h('button',{class:'btn',type:'button',onclick:()=>{askIds.delete(c.id);render()}},'Abbrechen'))));
+    else w.append(h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',disabled:genBusy.has(c.id)||!c.text&&!c.url,onclick:()=>{askIds.add(c.id);render()}},genBusy.has(c.id)?'Claude schreibt …':(c.tb?'Neuen Vorschlag erzeugen':'Kurztext vorschlagen')),
+      !c.text&&!c.url?h('span',{class:'muted'},'Ohne Quelltext ist kein Vorschlag möglich.'):null));
+  }
+  w.append(h('label',{class:'feld'},'Überschrift',tu),h('label',{class:'feld'},'Kurztext',tk,h('span',{id:'z-'+c.id,class:'zahl'+(n>WMAX*1.2||(n&&n<WMIN*.6)?' aus':'')},n+' Wörter (Richtwert '+WMIN+' bis '+WMAX+')')),h('label',{class:'feld'},'Link-Text',tl));
+  if(canWrite!==false)w.append(h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:()=>textSpeichern(c,read())},'Text speichern'),
+    c.tb?h('button',{class:'btn'+(tb.freigegeben?'':' primary'),type:'button',onclick:()=>textFreigabe(c,!tb.freigegeben)},tb.freigegeben?'Freigabe zurücknehmen':'Text freigeben'):null));
+  const ver=(c.tbVersionen||[]);
+  if(ver.length)w.append(h('details',{},h('summary',{},'Frühere Fassungen ('+ver.length+')'),ver.map((v,i)=>({v,i})).reverse().map(({v,i})=>h('div',{class:'ver'},h('span',{class:'muted'},dat(v.am,true)+' · '+(v.durch==='api'?'Claude':'von Hand')),h('span',{style:'flex:1 1 200px;min-width:0;overflow-wrap:anywhere'},kurz(v.ueberschrift,70)),canWrite===false?null:h('button',{class:'btn',type:'button',style:'min-height:36px',onclick:()=>textZurueck(c,i)},'Wiederherstellen')))));
+  return w;
+}
+const ausgabeText=a=>inAusgabe(a.id).map((c,i)=>(i+1)+'. '+((c.tb&&c.tb.ueberschrift)||c.titel||'Ohne Titel')+'\n'+((c.tb&&c.tb.kurztext)||'[Text fehlt]')).join('\n\n');
+async function kopieren(a){const t=ausgabeText(a);if(!t)return toast('Die Ausgabe hat noch keine Themen.');try{await navigator.clipboard.writeText(t);toast('Text der Ausgabe kopiert.')}catch(e){toast('Kopieren nicht möglich. Bitte im Browser erlauben.')}}
 function toast(m,ms){toastMsg=m;render();clearTimeout(toastT);toastT=setTimeout(()=>{toastMsg='';render()},ms||3500)}
 const status=c=>STATUS[c.status]?c.status:'vorschlag';
 const ausgabeId=c=>c.ausgabe||'';
@@ -171,6 +247,7 @@ function karte(c){
           if(ok)['t','s','a','h'].forEach(k=>delete drafts[c.id+'.'+k])}},'Änderungen speichern')));
     }
   }
+  if(isOpen)el.append(textPanel(c));
   if(canWrite!==false&&status(c)!=='beobachtung'){
     el.append(h('div',{class:'knoepfe'},ausgaben.map(a=>h('button',{class:'btn',type:'button',onclick:()=>zuordnen(c,a.id)},'In Ausgabe '+a.name.replace(/\s*\d{4}$/,'')))));
   }else if(status(c)==='beobachtung')el.append(h('div',{class:'muted'},'Beobachtung, kein Newsletterthema.'));
@@ -182,12 +259,13 @@ function karte(c){
 function ausgabePanel(a){
   const l=inAusgabe(a.id),warnN=l.filter(x=>x.hinweisText).length;
   return h('div',{class:'ausgabe'},
-    h('div',{class:'kopf2'},h('h2',{},'Ausgabe '+a.name),h('div',{class:'muted'},l.length+(l.length===1?' Thema':' Themen')+' · '+warnN+' mit Hinweis')),
+    h('div',{class:'kopf2'},h('h2',{},'Ausgabe '+a.name),h('div',{class:'muted'},l.length+(l.length===1?' Thema':' Themen')+' · '+warnN+' mit Hinweis · '+l.filter(x=>x.tb&&x.tb.freigegeben).length+' Texte freigegeben')),
     h('div',{class:'inhalt'},
+      l.length?h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:()=>kopieren(a)},'Texte der Ausgabe kopieren')):null,
       !l.length?h('p',{class:'leer'},'Noch keine Themen zugeordnet. Im Eingangskorb „In Ausgabe '+a.name.replace(/\s*\d{4}$/,'')+'“ wählen.'):null,
       l.map((c,i)=>{const s=SRC[c.typ]||SRC.note;return h('div',{class:'pos'},
         h('div',{class:'zeile'},h('span',{class:'nr'},'Position '+(i+1)),h('span',{class:'badge',style:s.s},s.l)),
-        h('div',{class:'t'},c.titel||'Ohne Titel'),warnBox(c),
+        h('div',{class:'t'},(c.tb&&c.tb.ueberschrift)||c.titel||'Ohne Titel'),c.tb&&c.tb.kurztext?h('div',{class:'tb-vorschau'},kurz(c.tb.kurztext,200)):null,h('div',{class:'zeile'},h('span',{class:'badge',style:!c.tb?'background:#E8EBEF;color:#2B3440':c.tb.freigegeben?'background:#E1F1E9;color:#1E5A40':'background:#FFF6DD;color:#4A3608'},!c.tb?'Text fehlt':c.tb.freigegeben?'Text freigegeben':'Text im Entwurf')),warnBox(c),
         canWrite===false?null:h('div',{class:'knoepfe'},
           h('button',{class:'btn',type:'button',disabled:i===0,onclick:()=>hoch(c)},'Nach oben'),
           h('button',{class:'btn',type:'button',onclick:()=>freigeben(c)},'Zurück in den Eingangskorb')))})));
@@ -222,7 +300,7 @@ function render(){
         canWrite===false?null:newIssue?h('div',{class:'formular',style:'margin:0'},h('label',{class:'feld'},'Name der Ausgabe',h('input',{id:'ausg-name',value:drafts['ausg.name']||'',placeholder:'z. B. Januar 2027',oninput:e=>{drafts['ausg.name']=e.target.value}})),
           h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:neueAusgabe},'Ausgabe anlegen'),h('button',{class:'btn',type:'button',onclick:()=>{newIssue=false;render()}},'Abbrechen'))):
           h('button',{class:'btn',type:'button',style:'align-self:flex-start',onclick:()=>{newIssue=true;render()}},'Ausgabe anlegen'),
-        h('p',{class:'hinweis-fuss'},'Die Reihenfolge in einer Ausgabe bestimmt die Reihenfolge im Newsletter. Textbausteine, Vorschau und Export folgen in den nächsten Stufen.'))),
+        h('p',{class:'hinweis-fuss'},'Die Reihenfolge in einer Ausgabe bestimmt die Reihenfolge im Newsletter. Vorschau und Export als HTML folgen in der nächsten Stufe.'))),
     toastMsg?h('div',{class:'toast',role:'status'},toastMsg):null);
   const l2=document.querySelector('.liste');if(l2)l2.scrollTop=st;
   if(id){const e=document.getElementById(id);if(e){e.focus();try{if(pos!=null)e.setSelectionRange(pos,pos)}catch(_){}}}
@@ -231,6 +309,7 @@ render();
 (async()=>{
   try{
     const user=await claude.use('user');canWrite=user?user.can('data.write'):null;
+    try{sample=await claude.use('sample')}catch(e){}
     db=await claude.use('db');
     if(!db){loaded=true;render();toast('Anmeldung nötig, um den Eingangskorb zu laden.');return}
     db.collection('quellen').onSnapshot(s=>{items=s.docs.map(d=>({id:d.id,...d.data()}));loaded=true;render()},()=>{loaded=true;toast('Eingangskorb nicht ladbar.')});

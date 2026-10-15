@@ -23,6 +23,6 @@ Geplante Aufgabe „Newsletter: Mail-Abruf in die Inbox (23:45)“, täglich 23:
 | 1 | Gerüst, Datenmodell | fertig |
 | 2 | Inbox: Notiz, Link, Mail, Textdatei (.txt, .md, .eml), Mailabruf | fertig, offen: docx, pdf, msg, Bilder, Link-Abruf |
 | 3 | Eingangskorb mit Status und Hinweis, Ausgaben, Zuordnung per Knopf, Reihenfolge | fertig (Vorlage "Newsletter-Dashboard"), offen: Drag-and-Drop, Schlagwörter, Bilder |
-| 4 | Textbausteine | offen |
+| 4 | Textbausteine: Vorschlag per Claude mit Sendevorschau, Bearbeiten, Versionen, Freigabe, Text der Ausgabe kopieren | fertig |
 | 5 | Export | offen |
 | 6 | Prüfung | offen |

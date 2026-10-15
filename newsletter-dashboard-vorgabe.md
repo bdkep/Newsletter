@@ -28,6 +28,14 @@ Arbeitsgrundlage für Claude Code. Ziel ist eine lokal lauffähige Web-Anwendung
 - Extrahierter Quelltext wird gespeichert, das Original bleibt unverändert in einer Dateiablage.
 - Eine Quelle kann mehreren Themenkarten zugeordnet werden, eine Themenkarte mehreren Quellen.
 
+### 3.1a Automatischer Mailabruf (Ergänzung des Auftraggebers)
+- Mails, die an `aschumann.bdkep+news@gmail.com` gehen, werden täglich um 23:45 Uhr (Europe/Berlin) abgerufen und als Quelle vom Typ `mail` in der Inbox abgelegt.
+- Abruf per IMAP; Zugangsdaten nur über Umgebungsvariablen (`MAIL_IMAP_USER`, `MAIL_IMAP_PASSWORD`, bei Gmail ein App-Passwort), nie im Repository.
+- Gmail liefert Mails an die Plus-Adresse im Postfach `aschumann.bdkep@gmail.com` aus; gefiltert wird auf den Empfänger `+news`.
+- Bereits abgerufene Mails werden nicht doppelt angelegt (Message-ID wird gespeichert).
+- Zeitplan über den Scheduler der Anwendung oder alternativ als Cron-Befehl; Abruf ist auch manuell per Schaltfläche möglich.
+- Umsetzung in Stufe 2 zusammen mit der Inbox.
+
 ### 3.2 Themenkarten
 Felder: Titel, Kurzbeschreibung, Quellen (1..n), Schlagwörter, Status (`Idee`, `Text in Arbeit`, `Text fertig`, `Freigegeben`), zugeordnete Ausgabe (oder keine), Position innerhalb der Ausgabe, Bilder (0..n, je mit Alt-Text und optionaler Bildunterschrift), Notizen (intern, nie im Newsletter), optionaler Link „Weiterlesen“.
 
@@ -94,7 +102,7 @@ Felder: Titel, Kurzbeschreibung, Quellen (1..n), Schlagwörter, Status (`Idee`, 
 ## 7. Nicht Bestandteil von Version 1
 
 - Versand, Abonnentenverwaltung, Öffnungs- und Klickstatistik, A/B-Tests.
-- Direktanbindung an Postfächer oder Cloud-Speicher (Gmail, SharePoint u. Ä.). Ist als spätere Erweiterung vorgesehen; die Quellenerfassung wird so gebaut, dass weitere Quelltypen als Module ergänzt werden können.
+- Direktanbindung an weitere Postfächer oder Cloud-Speicher (SharePoint u. Ä.); der Abruf des Newsletter-Postfachs nach 3.1a ist davon ausgenommen und Teil von Version 1. Weitere Anbindungen sind als spätere Erweiterung vorgesehen; die Quellenerfassung wird so gebaut, dass weitere Quelltypen als Module ergänzt werden können.
 - Mehrbenutzerbetrieb und Rechteverwaltung.
 
 ## 8. Vorgehen in Stufen

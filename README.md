@@ -7,7 +7,7 @@ Lokale Web-Anwendung: Inhalte sammeln, auf Ausgaben verteilen, Kurztexte erstell
 | Stufe | Inhalt | Status |
 |---|---|---|
 | 1 | Gerüst, Datenmodell, Start-Skript, README | fertig |
-| 2 | Inbox (alle Quelltypen) | offen |
+| 2 | Inbox (alle Quelltypen) inkl. täglichem Mailabruf 23:45 (Abschnitt 3.1a der Vorgabe) | offen |
 | 3 | Themenkarten und Board | offen |
 | 4 | Textbausteine, API-Erzeugung | offen |
 | 5 | Design und Export | offen (Designdateien nötig) |

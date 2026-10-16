@@ -282,20 +282,21 @@ function ausgabePanel(a){
 /* ---- Wünsche: Ideen zur Weiterentwicklung des Dashboards (Logik wie im Sekretariat-Dashboard) ----
    Sammlung `wuensche`: text, von, bereich, status (offen | ausgearbeitet | geprueft | erledigt | geschlossen), story, kriterien, erfolgsmass,
    pruefung, vorgabe, geprueftVon/-Am, bewaehrt {antwort, kommentar, von, wann}, kommentare, neuFuer, verlauf, angelegt, geaendert, geaendertVon. */
-const PERSONEN=['Andreas','Mario','Ina'];
+const PERSONEN=['Andreas','Moritz'];
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
 let me=PERSONEN.includes(lsGet('nl.me'))?lsGet('nl.me'):'';
 let view=lsGet('nl.view')==='wuensche'?'wuensche':'eingang';
 let wunsch=[],wLoaded=false,wLoadError='',wFilter=lsGet('nl.wfilter')||'offen',wq='',wForm=false,wSaving=false;
 const wCard=new Set(),wHist=new Set(),wEdit=new Set(),wBusy=new Set(),wCtl={},wPr={},wPrBusy=new Set(),wPrCtl={};
+let aend=[],besuche={},aendForm=false;const aeAlt=new Set();
 const nowIso=()=>new Date().toISOString();
 const fmt=iso=>dat(iso,true);
 const WOPEN=w=>w.status!=='erledigt'&&w.status!=='geschlossen';
 const WERLEDIGT=w=>w.status==='erledigt',WGESCHLOSSEN=w=>w.status==='geschlossen';
-const newForMe=c=>!!me&&!!c.neuFuer&&(c.neuFuer===me||(c.neuFuer==='beide'&&(me==='Andreas'||me==='Mario')));
-/* Wer prüft und schließt: Autor, Andreas und Mario. "Neu für dich" nach der Ausarbeitung: die jeweils andere Prüfperson. */
-const wNeuNach=w=>w.von==='Andreas'?'Mario':w.von==='Mario'?'Andreas':'beide';
+const newForMe=c=>!!me&&!!c.neuFuer&&(c.neuFuer===me||(c.neuFuer==='beide'&&(me==='Andreas'||me==='Moritz')));
+/* Wer prüft und schließt: Autor, Andreas und Moritz. "Neu für dich" nach der Ausarbeitung: die jeweils andere Prüfperson. */
+const wNeuNach=w=>w.von==='Andreas'?'Moritz':w.von==='Moritz'?'Andreas':'beide';
 const BEWAEHRT={ja:'ja',teilweise:'teilweise',nein:'nein'};
 const hatStory=w=>!!(w&&typeof w.story==='string'&&w.story.trim());
 const kriterienOf=w=>Array.isArray(w&&w.kriterien)?w.kriterien.filter(x=>typeof x==='string'&&x.trim()):[];
@@ -305,7 +306,7 @@ const hatVorgabe=w=>!!(w&&typeof w.vorgabe==='string'&&w.vorgabe.trim());
 /* Reihenfolge: offen, ausgearbeitet, geprüft (Einbau geprüft), erledigt. Mit Ausarbeitung geht Erledigt erst nach der Einbauprüfung. */
 const WERLEDIGT_MOEGLICH=w=>!hatStory(w)||hatVorgabe(w);
 const WSTATUS=w=>w.status==='erledigt'?'erledigt':w.status==='geschlossen'?'geschlossen':w.status==='geprueft'?'geprüft':w.status==='ausgearbeitet'?'ausgearbeitet':'offen';
-const wPruefRecht=w=>canWrite!==false&&!!me&&(w.von===me||me==='Andreas'||me==='Mario');
+const wPruefRecht=w=>canWrite!==false&&!!me&&(w.von===me||me==='Andreas'||me==='Moritz');
 const wLabel=o=>o?'Wunsch von '+(o.von||'unbekannt')+': '+String(o.text||'').replace(/\s+/g,' ').slice(0,90):'(Wunsch nicht mehr vorhanden)';
 const ART={dafuer:'spricht dafür',dagegen:'spricht dagegen',zusammen:'zusammen umsetzen'};
 const wBereich=()=>'Newsletter';
@@ -315,7 +316,7 @@ const ABLAEUFE="- Eingangskorb: Quellen (Mail, Datei, Web, Notiz) werden von Han
 "- Export: Kopieren des Textes der Ausgabe ist da, Vorschau und HTML-Export folgen (Stufe 5), Prüfung in Stufe 6. Der Export enthält nur freigegebene Texte, keine internen Hinweise und Quelldaten.\n"+
 "- Design: Farben, Schrift und Logos kommen aus `design/`, das Dashboard erfindet kein Design.\n"+
 "- Wünsche: Sammlung `wuensche`. Status `offen`, `ausgearbeitet`, `geprueft` (Einbauprüfung gespeichert), `erledigt`, `geschlossen` (nicht umgesetzt; geschlossene Wünsche zählen bei der Einbauprüfung nicht mit). Ausarbeitung (Story, Kriterien, Erfolgsmaß) bestätigt der Autor. Danach ist \"Einbau prüfen\" der feste nächste Schritt; ein ausgearbeiteter Wunsch wird erst nach gespeicherter Einbauprüfung erledigt. Ändert sich die Ausarbeitung, entfällt die Prüfung. Nach Erledigt beantwortet der Autor \"Bewährt?\". Ein Wunsch wird von einer Person erledigt, nie vom Agenten.\n"+
-"- Dashboard: Reiter Eingangskorb und Wünsche. Anmeldung durch Auswahl der Person (Andreas, Mario, Ina). Schreibrechte hängen an der Stufe \"Contributor\". Gemeinsame Datenbank.\n"+
+"- Dashboard: Reiter Eingangskorb und Wünsche. Anmeldung durch Auswahl der Person (Andreas, Moritz). Schreibrechte hängen an der Stufe \"Contributor\". Gemeinsame Datenbank.\n"+
 "- Datenschutz: Mails und Dokumente können vertrauliche oder personenbezogene Inhalte enthalten; keine echten Mails oder Quelltexte im Repo, Tests nur mit Testdaten.";
 const LEITPLANKEN="- Zuerst `README.md`, `newsletter-dashboard-vorgabe.md` und `style.md` lesen, sie sind verbindlich.\n- Auf einem eigenen Branch arbeiten, nicht auf `main`. Keinen Pull Request öffnen und nichts veröffentlichen, bevor die Person es ausdrücklich sagt.\n- Zuerst eine kurze Einbauanalyse schreiben: welche Stellen betroffen sind, was bei bestehenden Daten ohne neue Felder passiert.\n- Nichts erfinden, keine Design-Werte erfinden (`design/` ist maßgeblich). Mails und Quelltexte nicht ins Repo schreiben.\n- Gmail nur lesen. Keine Texte automatisch freigeben, keine Daten ohne Klick an Claude senden.\n- Änderungen klein halten und nur die Dateien anfassen, die der Wunsch braucht.";
 const mutateIn=async(col,id,fn,logText,okMsg)=>{
@@ -324,7 +325,7 @@ const mutateIn=async(col,id,fn,logText,okMsg)=>{
   if(busy)return false;busy=true;
   try{
     const ref=db.doc(col+'/'+id),snap=await ref.get();
-    if(!snap.exists){toast('Der Wunsch existiert nicht mehr.');return false}
+    if(!snap.exists){toast(col==='aenderungen'?'Die Änderung existiert nicht mehr.':'Der Wunsch existiert nicht mehr.');return false}
     const cur=snap.data(),patch=fn(cur)||{};
     if(newForMe(cur)&&!('neuFuer' in patch))patch.neuFuer='';
     const verlauf=(cur.verlauf||[]).slice(-199);
@@ -492,9 +493,9 @@ async function wunschAusarbeiten(w){
   if(!sample||wBusy.has(w.id))return;
   const ctl={aborted:false};wCtl[w.id]=ctl;wBusy.add(w.id);wEdit.add(w.id);wCard.add(w.id);render();
   const ko=(w.kommentare||[]).slice(-10).map(k=>'- '+k.wer+': '+k.text).join('\n');
-  const prompt='Du hilfst beim Ausarbeiten eines Wunsches für das Newsletter-Dashboard des Verbands BdKEP. Das Dashboard bedienen Andreas (Chef), Mario und Ina. '+
+  const prompt='Du hilfst beim Ausarbeiten eines Wunsches für das Newsletter-Dashboard des Verbands BdKEP. Das Dashboard bedienen Andreas und Moritz. '+
     'Es sammelt Quellen im Eingangskorb, ordnet sie Ausgaben zu und erzeugt Kurztexte für den Newsletter.\n\nWunsch von '+w.von+':\n---\n'+String(w.text||'').slice(0,4000)+'\n---\n'+(ko?'Kommentare dazu:\n'+ko+'\n':'')+
-    '\nSchreibe auf Deutsch einen Vorschlag mit:\n1. story: eine User Story in der Form "Als <Rolle> möchte ich <Ziel>, damit <Nutzen>". Die Rolle ist Andreas, Mario oder Ina, wie es zum Wunsch passt.\n'+
+    '\nSchreibe auf Deutsch einen Vorschlag mit:\n1. story: eine User Story in der Form "Als <Rolle> möchte ich <Ziel>, damit <Nutzen>". Die Rolle ist Andreas oder Moritz, wie es zum Wunsch passt.\n'+
     '2. kriterien: 2 bis 4 Akzeptanzkriterien, jedes ein kurzer prüfbarer Satz.\n3. erfolgsmass: ein Satz, woran man nach der Umsetzung erkennt, dass der Wunsch geholfen hat. Nenne eine Zahl aus den Daten des Dashboards (zum Beispiel Anzahl Quellen im Eingangskorb, Zeit bis zum fertigen Text) nur, wenn sie wirklich passt; sonst formuliere eine Frage, die die Person später mit Ja, teilweise oder Nein beantworten kann.\n'+
     'Erfinde nichts, was nicht im Wunsch steht. Antworte nur mit einem JSON-Objekt: {"story": "...", "kriterien": ["...", "..."], "erfolgsmass": "..."}';
   try{
@@ -583,13 +584,107 @@ function wcard(w){
   el.append(h('div',{class:'knoepfe'},h('button',{class:'btn','aria-expanded':'true',onclick:flip},'Zuklappen')));
   return el;
 }
+/* ---- Änderungen am Dashboard: Übersicht im Reiter Wünsche ----
+   Sammlung `aenderungen`: text, datum (JJJJ-MM-TT), bereich (Eingangskorb | Ausgaben | Texte | Wünsche | Allgemein), status (entwurf | freigegeben | verworfen),
+   nachsaetze, freigegebenVon/-Am, verlauf, quelle (hand | agent). Sammlung `besuche`: ein Dokument je Person, gesehenBis (ISO).
+   Neu für mich = freigegeben nach meinem gesehenBis; ohne Dokument gilt alles Freigegebene als neu. */
+const aeMut=(a,fn,log,ok)=>mutateIn('aenderungen',a.id,fn,log,ok);
+const heuteBerlin=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Berlin'}).format(new Date());
+const AEBEREICHE=['Eingangskorb','Ausgaben','Texte','Wünsche','Allgemein'];
+const aeFrei=()=>aend.filter(a=>a.status==='freigegeben');
+const aeEntw=()=>aend.filter(a=>a.status==='entwurf');
+const aeNeu=a=>!!me&&a.status==='freigegeben'&&(a.freigegebenAm||a.angelegt||'')>((besuche[me]||{}).gesehenBis||'');
+const aeSort=(x,y)=>(y.datum||'').localeCompare(x.datum||'')||(y.angelegt||'').localeCompare(x.angelegt||'');
+async function aenderungAnlegen(text,bereich){
+  text=(text||'').trim();
+  if(!text)return toast('Bitte den Text der Änderung eintragen.');
+  if(!db)return toast('Die Datenbank ist nicht erreichbar.');
+  if(!me)return toast('Bitte oben zuerst "Ich bin …" wählen.');
+  const id='a-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t=nowIso();
+  try{
+    await db.doc('aenderungen/'+id).set({text,datum:heuteBerlin(),bereich:bereich||'Allgemein',status:'entwurf',nachsaetze:[],quelle:'hand',
+      verlauf:[{wer:me,wann:t,text:'als Entwurf eingetragen'}],angelegt:t,geaendert:t,geaendertVon:me});
+    aendForm=false;delete drafts['neu.aend'];toast('Entwurf eingetragen. Er erscheint erst nach "Freigeben" in der Übersicht.');render();
+  }catch(e){toast('Speichern nicht möglich.')}
+}
+const aeAkt={
+  text:(a,text)=>{text=(text||'').trim();if(!text)return toast('Der Text darf nicht leer sein.');delete drafts[a.id+'.at'];
+    return aeMut(a,()=>({text}),'Text angepasst',()=>'Text gespeichert.')},
+  freigeben:(a,text)=>{text=(text||a.text||'').trim();if(!text)return toast('Der Text darf nicht leer sein.');delete drafts[a.id+'.at'];
+    return aeMut(a,()=>({text,status:'freigegeben',freigegebenVon:me,freigegebenAm:nowIso()}),'freigegeben',()=>'Freigegeben. Die Änderung steht jetzt in der Übersicht.')},
+  verwerfen:a=>aeMut(a,()=>({status:'verworfen'}),'verworfen',()=>'Entwurf verworfen.'),
+  nachsatz:(a,text)=>{text=(text||'').trim();if(!text)return toast('Bitte einen Nachsatz eintragen.');delete drafts[a.id+'.ns'];
+    return aeMut(a,cur=>({nachsaetze:(cur.nachsaetze||[]).slice(-199).concat([{wer:me,wann:nowIso(),text}])}),'Nachsatz: '+text,()=>'Nachsatz eingetragen.')}
+};
+async function aeGesehen(){
+  if(!db)return toast('Die Datenbank ist nicht erreichbar.');
+  if(!me)return toast('Bitte oben zuerst "Ich bin …" wählen.');
+  const t=nowIso();
+  try{await db.doc('besuche/'+me).set({person:me,gesehenBis:t,geaendert:t});toast('Als gesehen markiert. Die Einträge stehen jetzt unter "Frühere Änderungen".')}
+  catch(e){toast('Speichern nicht möglich.')}
+}
+function aeKarte(a,mitNachsatz){
+  const canAct=canWrite!==false&&!!me,ns=a.nachsaetze||[];
+  const k=[h('div',{class:'zeile'},
+    a.datum?h('span',{class:'pill'},fmtD.format(new Date(a.datum+'T12:00:00'))):null,
+    a.bereich?h('span',{class:'pill'},a.bereich):null,
+    aeNeu(a)?h('span',{class:'pill neu'},'Neu'):null)];
+  k.push(h('p',{},a.text));
+  if(ns.length)k.push(hist(ns.map(n=>h('li',{},h('span',{class:'t'},fmt(n.wann)),h('span',{style:'white-space:pre-wrap;overflow-wrap:anywhere'},'Nachsatz von '+n.wer+': '+n.text)))));
+  if(canAct&&mitNachsatz){
+    const ta=h('textarea',{id:'ns-'+a.id,'aria-label':'Nachsatz eintragen',placeholder:'Nachsatz eintragen',style:'min-height:64px',oninput:e=>{drafts[a.id+'.ns']=e.target.value}});
+    ta.value=drafts[a.id+'.ns']||'';
+    k.push(h('div',{class:'feld'},ta,h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onmousedown:e=>e.preventDefault(),onclick:()=>{ta.blur();aeAkt.nachsatz(a,drafts[a.id+'.ns'])}},'Nachsatz speichern'))));
+  }
+  return h('article',{class:'k',id:'ae-'+a.id},k);
+}
+function aeEntwurf(a){
+  const ta=h('textarea',{id:'at-'+a.id,'aria-label':'Text der Änderung',oninput:e=>{drafts[a.id+'.at']=e.target.value}});
+  ta.value=drafts[a.id+'.at']!=null?drafts[a.id+'.at']:a.text;
+  const canAct=canWrite!==false&&!!me,cur=()=>drafts[a.id+'.at']!=null?drafts[a.id+'.at']:a.text;
+  return h('article',{class:'k',id:'ae-'+a.id},
+    h('div',{class:'zeile'},h('span',{class:'pill warn'},'Entwurf, noch nicht freigegeben'),a.bereich?h('span',{class:'pill'},a.bereich):null),
+    canAct?ta:h('p',{},a.text),
+    canAct?h('div',{class:'knoepfe'},
+      h('button',{class:'btn primary',type:'button',onmousedown:e=>e.preventDefault(),onclick:()=>{ta.blur();aeAkt.freigeben(a,cur())}},'Freigeben'),
+      h('button',{class:'btn',type:'button',onmousedown:e=>e.preventDefault(),onclick:()=>{ta.blur();aeAkt.text(a,cur())}},'Text speichern'),
+      h('button',{class:'btn',type:'button',onclick:()=>aeAkt.verwerfen(a)},'Verwerfen')):null);
+}
+function aenderungenView(){
+  const frei=aeFrei().sort(aeSort),neu=frei.filter(aeNeu),alt=frei.filter(a=>!aeNeu(a)),entw=aeEntw().sort(aeSort),canAct=canWrite!==false&&!!me;
+  const box=h('section',{class:'links',id:'aenderungen','aria-label':'Änderungen am Dashboard'});
+  const kopf=h('div',{class:'sec-head'},h('div',{class:'sec-top'},h('h2',{},'Änderungen am Dashboard'),h('span',{class:'muted'},neu.length+' neu')),
+    h('p',{class:'muted',style:'margin:8px 0 0'},'Was sich an Oberfläche und Grafik geändert hat, in kurzen Sätzen. Zu jedem Eintrag kannst du einen Nachsatz schreiben.'),
+    canAct?h('div',{class:'chips'},h('button',{class:'btn',type:'button',onclick:()=>{aendForm=!aendForm;render()}},'Änderung eintragen')):null);
+  box.append(kopf);
+  const inh=h('div',{class:'wliste'});
+  if(aendForm&&canAct){
+    const ta=h('textarea',{id:'ae-neu-text','aria-label':'Text der Änderung',placeholder:'Was sehen oder bedienen die Nutzer jetzt anders? Ein bis zwei kurze Sätze.',oninput:e=>{drafts['neu.aend']=e.target.value}});
+    ta.value=drafts['neu.aend']||'';
+    const sel=h('select',{id:'ae-neu-bereich','aria-label':'Bereich',onchange:e=>{drafts['neu.aendb']=e.target.value}},AEBEREICHE.map(b=>h('option',{value:b},b)));
+    sel.value=drafts['neu.aendb']||'Allgemein';
+    inh.append(h('div',{class:'formular',style:'margin:0'},h('label',{class:'feld'},'Bereich',sel),h('label',{class:'feld'},'Text',ta),
+      h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onmousedown:e=>e.preventDefault(),onclick:()=>{ta.blur();aenderungAnlegen(drafts['neu.aend'],sel.value)}},'Als Entwurf eintragen'),h('button',{class:'btn',type:'button',onclick:()=>{aendForm=false;render()}},'Abbrechen'))));
+  }
+  if(entw.length){inh.append(h('h4',{style:'margin:0;color:var(--navy)'},'Zur Freigabe ('+entw.length+')'));entw.forEach(a=>inh.append(aeEntwurf(a)))}
+  if(!frei.length&&!entw.length)inh.append(h('p',{class:'leer'},'Noch keine Änderungen eingetragen.'));
+  if(neu.length){
+    inh.append(h('h4',{style:'margin:0;color:var(--navy)'},'Neu seit deinem letzten Besuch ('+neu.length+')'));
+    neu.forEach(a=>inh.append(aeKarte(a,true)));
+    if(canAct)inh.append(h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',id:'ae-gesehen',onclick:aeGesehen},'Als gesehen markieren')));
+  }else if(frei.length)inh.append(h('p',{class:'leer'},'Seit deinem letzten Besuch ist nichts Neues dazugekommen.'));
+  if(alt.length)inh.append(h('details',{class:'tb',open:aeAlt.has('alt')?true:null,ontoggle:e=>{e.target.open?aeAlt.add('alt'):aeAlt.delete('alt')}},h('summary',{},'Frühere Änderungen ('+alt.length+')'),
+    h('div',{style:'display:flex;flex-direction:column;gap:12px;margin-top:8px'},alt.map(a=>aeKarte(a,true)))));
+  box.append(inh);
+  return box;
+}
 function wuenscheView(){
   const c=wstats();
   const FL=[['fuermich','Neu für mich'],['offen','Offen'],['erledigt','Erledigt'],['bewaehrt','Bewährt?'],['geschlossen','Geschlossen'],['alle','Alle']];
   if(!FL.some(([k])=>k===wFilter))wFilter='offen';
   const list=visibleW(),canAct=canWrite!==false;
   const ta=h('textarea',{id:'wunsch-neu','aria-label':'Wunsch beschreiben',placeholder:'Was fehlt im Dashboard oder sollte anders sein?',oninput:e=>{drafts['neu.wunsch']=e.target.value}});ta.value=drafts['neu.wunsch']||'';
-  return h('main',{class:'gutter'},h('section',{class:'links'},
+  return h('main',{class:'gutter'},aenderungenView(),h('section',{class:'links'},
     h('div',{class:'sec-head'},
       h('div',{class:'sec-top'},h('h2',{},'Wünsche'),h('span',{class:'muted'},list.length+(list.length===1?' Wunsch':' Wünsche')+' in dieser Ansicht')),
       h('p',{class:'muted',style:'margin:8px 0 0'},'Ideen zur Weiterentwicklung des Newsletter-Dashboards. Ablauf: eintragen, ausarbeiten, Einbau prüfen, erledigen, später "Bewährt?" beantworten.'),
@@ -613,7 +708,7 @@ function render(){
   const count=fn=>unz.filter(fn).length;
   const chips=[['alle','Alle ('+unz.length+')'],['mail','Mail ('+count(c=>c.typ==='mail')+')'],['document','Datei ('+count(c=>c.typ==='document')+')'],['link','Web ('+count(c=>c.typ==='link')+')'],['note','Notiz ('+count(c=>c.typ==='note')+')'],['beobachtung','Beobachtung ('+count(c=>status(c)==='beobachtung')+')']];
   const shown=unz.filter(c=>filter==='alle'||(filter==='beobachtung'?status(c)==='beobachtung':c.typ===filter)).sort((x,y)=>RANK[status(x)]-RANK[status(y)]||(y.erfasstAm||'').localeCompare(x.erfasstAm||''));
-  const ws=wstats(),kpW=[[ws.fuermich,'Neu für mich'],[ws.offen,'Offene Wünsche'],[ws.erledigt,'Erledigt'],[ws.bewaehrt,'Bewährt? offen']];
+  const ws=wstats(),kpW=[[aeFrei().filter(aeNeu).length,'Neue Änderungen'],[ws.fuermich,'Neu für mich'],[ws.offen,'Offene Wünsche'],[ws.erledigt,'Erledigt'],[ws.bewaehrt,'Bewährt? offen']];
   const kp=[[echte.filter(c=>!ausgabeId(c)).length,'Im Eingangskorb'],[echte.filter(c=>ausgabeId(c)).length,'Einer Ausgabe zugeordnet'],[echte.filter(c=>c.hinweisText).length,'Themen mit Hinweis'],[items.filter(c=>status(c)==='beobachtung').length,'In Beobachtung']];
   app.append(
     h('header',{class:'kopf gutter'},h('div',{},h('div',{class:'over'},'Newsletter-Redaktion'),h('h1',{},'Themen sammeln, Ausgaben planen'),h('p',{class:'sub'},'Stand '+dat(new Date().toISOString())+' · Daten aus dem Themenspeicher')),h('img',{src:LOGO_D,alt:'BdKEP'})),
@@ -653,6 +748,8 @@ render();
     if(!db){loaded=true;render();toast('Anmeldung nötig, um den Eingangskorb zu laden.');return}
     db.collection('quellen').onSnapshot(s=>{items=s.docs.map(d=>({id:d.id,...d.data()}));loaded=true;render()},()=>{loaded=true;toast('Eingangskorb nicht ladbar.')});
     db.collection('wuensche').onSnapshot(s=>{wunsch=s.docs.map(d=>({id:d.id,...d.data()}));wLoaded=true;wLoadError='';render()},e=>{wLoaded=true;wLoadError='Die Wünsche können nicht geladen werden ('+(e&&e.code||'Fehler')+').';render()});
+    db.collection('aenderungen').onSnapshot(s=>{aend=s.docs.map(d=>({id:d.id,...d.data()}));render()},()=>{});
+    db.collection('besuche').onSnapshot(s=>{besuche={};s.docs.forEach(d=>{besuche[d.id]=d.data()});render()},()=>{});
     db.collection('ausgaben').onSnapshot(s=>{ausgaben=s.docs.map(d=>({id:d.id,...d.data()})).sort((x,y)=>(x.reihenfolge||0)-(y.reihenfolge||0));render()},()=>{});
   }catch(e){loaded=true;render()}
 })();

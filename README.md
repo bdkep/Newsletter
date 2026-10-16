@@ -15,7 +15,9 @@ Datenbank-Sammlungen (Artifact-DB):
 
 ## Wünsche
 
-Reiter „Wünsche“ neben dem Eingangskorb, Logik wie im Sekretariat-Dashboard: Wunsch eintragen, Ausarbeitung (User Story, 2 bis 4 Kriterien, Erfolgsmaß; Vorschlag per Claude nur zum Prüfen, gespeichert wird erst nach Bestätigung), „Einbau prüfen“ (Abgleich mit den Abläufen des Dashboards und anderen Wünschen, Rückfragen, Vorgabe für Claude Code), Erledigt erst nach gespeicherter Einbauprüfung, danach „Bewährt?“ durch den Autor, Schließen und Wieder öffnen, Kommentare, Historie, „Neu für dich“. Beim Öffnen wählt jede Person „Ich bin …“ (Andreas, Mario, Ina), das ist keine Anmeldung. Prüfen und Schließen dürfen Autor, Andreas und Mario. Die Abläufe für die Einbauprüfung stehen als Text im Dashboard (`ABLAEUFE`) und müssen bei Änderungen der Abläufe nachgezogen werden. Die Änderungsübersicht des Sekretariats ist hier nicht enthalten.
+Reiter „Wünsche“ neben dem Eingangskorb, Logik wie im Sekretariat-Dashboard: Wunsch eintragen, Ausarbeitung (User Story, 2 bis 4 Kriterien, Erfolgsmaß; Vorschlag per Claude nur zum Prüfen, gespeichert wird erst nach Bestätigung), „Einbau prüfen“ (Abgleich mit den Abläufen des Dashboards und anderen Wünschen, Rückfragen, Vorgabe für Claude Code), Erledigt erst nach gespeicherter Einbauprüfung, danach „Bewährt?“ durch den Autor, Schließen und Wieder öffnen, Kommentare, Historie, „Neu für dich“. Beim Öffnen wählt jede Person „Ich bin …“ (Andreas, Moritz), das ist keine Anmeldung. Prüfen und Schließen dürfen Autor, Andreas und Moritz. Die Abläufe für die Einbauprüfung stehen als Text im Dashboard (`ABLAEUFE`) und müssen bei Änderungen der Abläufe nachgezogen werden. 
+
+Über den Wünschen steht „Änderungen am Dashboard“: kurze, freigegebene Texte zu dem, was sich an Oberfläche und Grafik geändert hat, je mit Nachsätzen. Was seit „Als gesehen markieren“ der Person dazukam, steht unter „Neu“, der Rest zugeklappt unter „Frühere Änderungen“. Entwürfe werden im Dashboard angepasst und freigegeben (Sammlungen `aenderungen`, `besuche`).
 
 ## Mailabruf
 

@@ -1,0 +1,4 @@
+:root{--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;--space-8:64px;--space-9:96px;
+--radius-sm:2px;--radius-md:6px;--radius-lg:8px;--radius-pill:4px;
+--shadow-sm:0 1px 3px rgba(0,26,61,.08);--shadow-md:0 4px 16px rgba(0,26,61,.10);--shadow-lg:0 12px 40px rgba(0,26,61,.16);
+--slant:11deg;/* @kind other */--ease:cubic-bezier(.2,.7,.2,1);/* @kind other */--dur:160ms/* @kind other */}

@@ -28,6 +28,13 @@ Arbeitsgrundlage für Claude Code. Ziel ist eine lokal lauffähige Web-Anwendung
 - Extrahierter Quelltext wird gespeichert, das Original bleibt unverändert in einer Dateiablage.
 - Eine Quelle kann mehreren Themenkarten zugeordnet werden, eine Themenkarte mehreren Quellen.
 
+### 3.1a Automatischer Mailabruf (Ergänzung des Auftraggebers)
+- Mails, die an `aschumann.bdkep+news@gmail.com` gehen, werden täglich um 23:45 Uhr (Europe/Berlin) abgerufen und als Quelle vom Typ `mail` in der Inbox abgelegt.
+- Abruf über den Gmail-Connector als geplante Aufgabe (wie bei Aufgaben, Sekretariat, Finanzcockpit), kein IMAP und kein App-Passwort. Suche: `deliveredto:aschumann.bdkep+news@gmail.com`; Gmail wird nur gelesen.
+- Die Aufgabe schreibt in die Artifact-Datenbank des Dashboards (Sammlung `quellen`, Dokument-ID `m-<Gmail-Nachrichten-ID>`).
+- Bereits abgerufene Mails werden nicht doppelt angelegt (Message-ID wird gespeichert).
+- Umsetzung in Stufe 2 zusammen mit der Inbox.
+
 ### 3.2 Themenkarten
 Felder: Titel, Kurzbeschreibung, Quellen (1..n), Schlagwörter, Status (`Idee`, `Text in Arbeit`, `Text fertig`, `Freigegeben`), zugeordnete Ausgabe (oder keine), Position innerhalb der Ausgabe, Bilder (0..n, je mit Alt-Text und optionaler Bildunterschrift), Notizen (intern, nie im Newsletter), optionaler Link „Weiterlesen“.
 
@@ -72,6 +79,8 @@ Felder: Titel, Kurzbeschreibung, Quellen (1..n), Schlagwörter, Status (`Idee`, 
 
 ## 5. Technische Rahmenbedingungen
 
+**Änderung 2026-10-15 (Auftraggeber):** Das Dashboard wird wie Hub, Sekretariat und Aufgaben als Artifact mit Artifact-Datenbank umgesetzt, nicht als lokale Python-App. Grund: der automatische Mailabruf per Gmail-Connector läuft in der Cloud und erreicht keine lokale Datenbank. Die Aussagen zu SQLite, `data/`, Start-Skript und Anthropic-API-Schlüssel unten gelten damit nicht mehr; Texterzeugung läuft über die Artifact-Funktion „Claude fragen“ (`sample`), Datensicherung über die Datenbank des Artifacts. Alle fachlichen Anforderungen bleiben.
+
 - Lokal lauffähig, ein Nutzer, kein Cloud-Zwang. Start mit einem einzigen Befehl, Anleitung in `README.md`.
 - Datenhaltung: SQLite plus Dateiablage im Projektordner (`data/`). Export/Backup als ZIP.
 - Technologiewahl liegt bei Claude Code; bevorzugt wird ein schlanker Aufbau mit wenigen Abhängigkeiten (Vorschlag: Python mit FastAPI und SQLite, Frontend ohne aufwendiges Build-System). Die Wahl wird in der README kurz begründet.
@@ -94,7 +103,7 @@ Felder: Titel, Kurzbeschreibung, Quellen (1..n), Schlagwörter, Status (`Idee`, 
 ## 7. Nicht Bestandteil von Version 1
 
 - Versand, Abonnentenverwaltung, Öffnungs- und Klickstatistik, A/B-Tests.
-- Direktanbindung an Postfächer oder Cloud-Speicher (Gmail, SharePoint u. Ä.). Ist als spätere Erweiterung vorgesehen; die Quellenerfassung wird so gebaut, dass weitere Quelltypen als Module ergänzt werden können.
+- Direktanbindung an weitere Postfächer oder Cloud-Speicher (SharePoint u. Ä.); der Abruf des Newsletter-Postfachs nach 3.1a ist davon ausgenommen und Teil von Version 1. Weitere Anbindungen sind als spätere Erweiterung vorgesehen; die Quellenerfassung wird so gebaut, dass weitere Quelltypen als Module ergänzt werden können.
 - Mehrbenutzerbetrieb und Rechteverwaltung.
 
 ## 8. Vorgehen in Stufen

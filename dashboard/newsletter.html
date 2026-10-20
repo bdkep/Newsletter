@@ -105,32 +105,45 @@ let db=null,canWrite=null,items=[],ausgaben=[],loaded=false,filter='alle',showNe
 const openIds=new Set(),delIds=new Set(),drafts={},askIds=new Set(),genBusy=new Set(),vorschlagIds=new Set();
 let sample=null;
 const WORDS=t=>((t||'').trim().match(/\S+/g)||[]).length;
-const WMIN=40,WMAX=90;
+const ZMIN=100,ZMAX=3000,ZSTD=450;
+const zielOf=c=>{const z=parseInt(c&&c.zeichen,10);return z>=ZMIN&&z<=ZMAX?z:ZSTD};
 /* Stilvorgaben wie style.md; die Beispiele zeigen nur Aufbau und Ton, aus ihnen werden keine Angaben übernommen */
-const STIL=`Du schreibst Kurztexte für den Newsletter des Bundesverbands der Kurier-Express-Post-Dienste (BdKEP), auf Deutsch, Anrede der Leser: Mitglieder, Verband spricht als "wir" nur, wenn die Quelle das so tut.
+const STIL_KOPF=`Du schreibst Kurztexte für den Newsletter des Bundesverbands der Kurier-Express-Post-Dienste (BdKEP), auf Deutsch, Anrede der Leser: Mitglieder, Verband spricht als "wir" nur, wenn die Quelle das so tut.
 Regeln:
 - sachlich, neutral, dauerhaft gültige Formulierungen; keine Werbesprache, keine wertenden Zusätze, keine rhetorischen Fragen, keine typischen KI-Formulierungen.
 - Angaben ausschließlich aus der Quelle. Fehlt etwas, das für den Leser wichtig wäre (Datum, Ort, Frist, Link, Kontakt), schreibe an die Stelle [Angabe fehlt] und erfinde nichts.
 - Überschrift: "Thema: Kernaussage" (oder bei Terminen "Datum – Veranstaltung"), höchstens 14 Wörter, ohne Punkt am Ende, ohne Nummer.
-- Kurztext: ein bis zwei Absätze, zusammen ${WMIN} bis ${WMAX} Wörter, mit konkreten Daten (Datum mit Wochentag, Uhrzeit, Beträge, Fristen), wenn die Quelle sie nennt.
+- Kurztext: ein bis zwei Absätze, Umfang siehe unten, mit konkreten Daten (Datum mit Wochentag, Uhrzeit, Beträge, Fristen), wenn die Quelle sie nennt.
 - Nennt die Quelle einen Link, stelle ihn als reine URL ans Ende des Textes. Nennt sie eine Kontaktperson oder Kontaktdaten, füge eine Zeile "Kontakt: ..." an. Nennt sie keinen Link, aber einer wäre sinnvoll, schreibe "[Link einfügen]".
 - Hinweise des Redakteurs sind nur zur Prüfung gedacht und kommen nicht in den Text.
-Beispiele für Aufbau und Ton (Inhalte nicht übernehmen):
+`;
+const STIL_BSP=`Beispiele für Aufbau und Ton (Inhalte nicht übernehmen):
 Überschrift: Postgesetz: Kabinett beschließt Entwurf – Teilleistungen nicht mehr im Universaldienst
 Kurztext: Das Bundeskabinett hat am 14.10. den Entwurf zur Änderung des Postgesetzes freigegeben. Teilleistungen gehören danach nicht mehr zu den Universaldienstleistungen. Damit werden sie voraussichtlich zum 1.1.2027 wieder mehrwertsteuerpflichtig. https://www.bundeswirtschaftsministerium.de/...
 Überschrift: 28.10.2026 – 1. Münchner Radl-Logistik-Tag
 Kurztext: Am Mittwoch, 28.10.2026, findet von 11:00 bis 15:00 Uhr der 1. Münchner Radl-Logistik-Tag statt. Veranstalter ist das B2B Lastenrad Zentrum München, Kooperationspartner sind unter anderem der BdKEP und das Mobilitätsreferat München. Im Mittelpunkt stehen gewerbliche Schwerlastenräder in der KEP- und Stadtlogistik. Schwerlastenräder und E-Vans stehen für Probefahrten bereit. [Link einfügen]
-Antworte ausschließlich mit JSON: {"ueberschrift":"...","kurztext":"...","linkText":""}. linkText ist der Text für eine Schaltfläche, z. B. "Zur Anmeldung", nur wenn ein Link vorhanden ist, sonst "".`;
-const quellText=c=>[c.titel?'Titel der Quelle: '+c.titel:'',c.typ==='mail'&&c.mailBetreff?'Betreff der Mail: '+c.mailBetreff:'',c.url?'Link: '+c.url:'','Text der Quelle:\n'+(c.text||'(kein Text hinterlegt)'),c.hinweisText?'Hinweis des Redakteurs (nicht in den Text übernehmen): '+c.hinweisText:''].filter(Boolean).join('\n');
-async function erzeugen(c){
+`;
+const STIL_ENDE=z=>`Umfang: Der Kurztext hat etwa ${z} Zeichen einschließlich Leerzeichen und Link (zulässig ${Math.round(z*.9)} bis ${Math.round(z*1.1)}). Der Umfang ist verbindlich. Reichen die Angaben der Quelle für diesen Umfang nicht aus, fülle nicht mit Allgemeinplätzen auf, sondern frage nach.
+Rückfragen: Reichen die Angaben der Quelle nicht für einen belastbaren Text (es fehlt z. B. das Thema selbst, Wer, Was, Wann oder die Kernaussage), schreibe keinen Text, sondern setze "status":"rueckfragen" und nenne in "rueckfragen" ein bis fünf konkrete, einzeln beantwortbare Fragen. Fehlen nur Nebenangaben, schreibe den Text mit [Angabe fehlt] und setze "status":"ok". Liegen ergänzende Angaben des Redakteurs vor, gelten sie wie die Quelle.
+Antworte ausschließlich mit JSON: {"status":"ok","ueberschrift":"...","kurztext":"...","linkText":"","rueckfragen":[]}. Bei "rueckfragen" bleiben ueberschrift, kurztext und linkText leer. linkText ist der Text für eine Schaltfläche, z. B. "Zur Anmeldung", nur wenn ein Link vorhanden ist, sonst "".`;
+const quellText=c=>[c.titel?'Titel der Quelle: '+c.titel:'',c.typ==='mail'&&c.mailBetreff?'Betreff der Mail: '+c.mailBetreff:'',c.url?'Link: '+c.url:'','Text der Quelle:\n'+(c.text||'(kein Text hinterlegt)'),c.ergaenzung?'Ergänzende Angaben des Redakteurs (wie Quelle verwenden):\n'+c.ergaenzung:'',c.hinweisText?'Hinweis des Redakteurs (nicht in den Text übernehmen): '+c.hinweisText:''].filter(Boolean).join('\n');
+async function erzeugen(c,f){
   askIds.delete(c.id);
   if(!sample)return toast('Die Texterzeugung ist in dieser Ansicht nicht verfügbar. Der Text lässt sich von Hand schreiben.');
+  const z=Math.min(ZMAX,Math.max(ZMIN,parseInt(f.z,10)||ZSTD)),erg=(f.e||'').trim();
+  c={...c,zeichen:z,ergaenzung:erg};
   genBusy.add(c.id);render();
   try{
-    const r=await sample(stilPrompt()+'\n\n--- Quelle ---\n'+quellText(c),{cache:false,modelTier:'default'});
+    const r=await sample(stilPrompt(z)+'\n\n--- Quelle ---\n'+quellText(c),{cache:false,modelTier:'default'});
     const m=String((r&&r.text)||'').match(/\{[\s\S]*\}/);const j=JSON.parse(m?m[0]:'');
-    drafts[c.id+'.tu']=String(j.ueberschrift||'').trim();drafts[c.id+'.tk']=String(j.kurztext||'').trim();drafts[c.id+'.tl']=String(j.linkText||'').trim();
-    vorschlagIds.add(c.id);toast('Vorschlag liegt vor. Bitte prüfen, anpassen und speichern.',5000);
+    const fragen=(Array.isArray(j.rueckfragen)?j.rueckfragen:[]).map(x=>String(x||'').trim()).filter(Boolean).slice(0,5);
+    const patch={zeichen:z,ergaenzung:erg,rueckfragen:j.status==='rueckfragen'&&fragen.length?fragen:[]};
+    await db.doc('quellen/'+c.id).update(patch);
+    if(patch.rueckfragen.length){delete drafts[c.id+'.e'];toast('Für einen Textvorschlag fehlen Angaben. Die Rückfragen stehen unter „Newsletter-Text“.',7000)}
+    else{
+      drafts[c.id+'.tu']=String(j.ueberschrift||'').trim();drafts[c.id+'.tk']=String(j.kurztext||'').trim();drafts[c.id+'.tl']=String(j.linkText||'').trim();
+      vorschlagIds.add(c.id);toast('Vorschlag liegt vor. Bitte prüfen, anpassen und speichern.',5000);
+    }
   }catch(e){toast(e&&e.code==='not_granted'?'Die Texterzeugung wurde nicht erlaubt.':'Kein Vorschlag erhalten. Bitte erneut versuchen oder von Hand schreiben.')}
   finally{genBusy.delete(c.id);render()}
 }
@@ -145,24 +158,31 @@ const textFreigabe=(c,v)=>upd(c,{tb:{...c.tb,freigegeben:v}},v?'Text freigegeben
 const textZurueck=(c,i)=>{const ver=(c.tbVersionen||[]).slice(),w=ver.splice(i,1)[0];if(c.tb)ver.push(c.tb);return upd(c,{tb:{...w,freigegeben:false},tbVersionen:ver.slice(-20)},'Frühere Fassung wiederhergestellt, Freigabe zurückgesetzt.')};
 function textPanel(c){
   const dk=(k,d)=>drafts[c.id+'.'+k]!==undefined?drafts[c.id+'.'+k]:d,tb=c.tb||{};
-  const mk=(k,v)=>e=>{drafts[c.id+'.'+k]=e.target.value;if(k==='tk'){const z=document.getElementById('z-'+c.id);if(z){const n=WORDS(e.target.value);z.textContent=n+' Wörter (Richtwert '+WMIN+' bis '+WMAX+')';z.className='zahl'+(n>WMAX*1.2||(n&&n<WMIN*.6)?' aus':'')}}};
+  const ziel=()=>Math.min(ZMAX,Math.max(ZMIN,parseInt(dk('z',zielOf(c)),10)||ZSTD)),zahlTxt=(n,z)=>n+' Zeichen, Ziel '+z+' (zulässig '+Math.round(z*.9)+' bis '+Math.round(z*1.1)+')',zahlAus=(n,z)=>n&&(n>z*1.1||n<z*.9);
+  const mk=(k,v)=>e=>{drafts[c.id+'.'+k]=e.target.value;if(k==='tk'||k==='z'){const z=document.getElementById('z-'+c.id);if(z){const n=(dk('tk',tb.kurztext||'')).length;z.textContent=zahlTxt(n,ziel());z.className='zahl'+(zahlAus(n,ziel())?' aus':'')}}};
   const tu=h('input',{id:'tu-'+c.id,oninput:mk('tu')});tu.value=dk('tu',tb.ueberschrift||'');
   const tk=h('textarea',{id:'tk-'+c.id,style:'min-height:150px',oninput:mk('tk')});tk.value=dk('tk',tb.kurztext||'');
   const tl=h('input',{id:'tl-'+c.id,oninput:mk('tl'),placeholder:'z. B. Zur Anmeldung (nur mit Link)'});tl.value=dk('tl',tb.linkText||'');
-  const n=WORDS(tk.value),read=()=>({u:dk('tu',tb.ueberschrift||''),k:dk('tk',tb.kurztext||''),l:dk('tl',tb.linkText||'')});
+  const n=tk.value.length,read=()=>({u:dk('tu',tb.ueberschrift||''),k:dk('tk',tb.kurztext||''),l:dk('tl',tb.linkText||'')});
   const w=h('div',{class:'tb'},h('div',{class:'zeile'},h('h4',{},'Newsletter-Text'),
     c.tb?h('span',{class:'badge',style:tb.freigegeben?'background:#E1F1E9;color:#1E5A40':'background:#FFF6DD;color:#4A3608'},tb.freigegeben?'Freigegeben':'Entwurf'):h('span',{class:'badge',style:'background:#E8EBEF;color:#2B3440'},'Noch kein Text'),
     c.tb?h('span',{class:'muted'},(tb.durch==='api'?'Vorschlag von Claude, bearbeitet':tb.durch==='archiv'?'aus dem Archiv übernommen':'von Hand')+' · '+dat(tb.am,true)):null));
   if(vorschlagIds.has(c.id))w.append(h('div',{class:'warn warn-k'},h('strong',{},'Vorschlag von Claude, noch nicht gespeichert.'),' Alle Angaben bitte mit der Quelle abgleichen. Stellen mit [Angabe fehlt] oder [Link einfügen] ergänzen.'));
   if(canWrite!==false){
+    const zi=h('input',{id:'zi-'+c.id,type:'number',min:ZMIN,max:ZMAX,step:50,style:'max-width:120px',oninput:mk('z')});zi.value=dk('z',zielOf(c));
+    const ze=h('textarea',{id:'te-'+c.id,style:'min-height:70px',oninput:mk('e'),placeholder:'Antworten auf Rückfragen, Termine, Links, Kontakt oder sonstige Angaben, die in der Quelle fehlen'});ze.value=dk('e',c.ergaenzung||'');
+    w.append(h('div',{class:'zeile'},h('label',{class:'feld',style:'margin:0'},'Umfang des Textvorschlags (Zeichen)',zi),
+      [300,500,800].map(v=>h('button',{class:'btn',type:'button',style:'min-height:36px',onclick:()=>{drafts[c.id+'.z']=String(v);render()}},v)),(()=>{const st=archivStat();return st&&st.zeichen?h('span',{class:'muted'},'Archiv: Abschnitte im Schnitt '+st.zeichen+' Zeichen'):null})()));
+    if((c.rueckfragen||[]).length)w.append(h('div',{class:'warn warn-k'},h('strong',{},'Für einen Textvorschlag fehlen Angaben. Bitte klären:'),h('ul',{style:'margin:6px 0 0 18px;padding:0'},c.rueckfragen.map(q=>h('li',{},q))),h('div',{class:'muted',style:'margin-top:6px'},'Antworten unten bei „Ergänzende Angaben“ eintragen und den Vorschlag erneut erzeugen.')));
+    w.append(h('label',{class:'feld'},'Ergänzende Angaben (gehen mit an Claude)',ze));
     if(askIds.has(c.id))w.append(h('div',{class:'senden'},h('strong',{},'Das wird an Claude gesendet:'),
-      h('ul',{},h('li',{},'Titel und Text dieser Quelle ('+(c.text||'').length+' Zeichen)'),c.url?h('li',{},'der Link der Quelle'):null,c.typ==='mail'&&c.mailBetreff?h('li',{},'der Betreff der Mail'):null,c.hinweisText?h('li',{},'dein Hinweistext (nur zur Prüfung)'):null,stilBeispiele().length?h('li',{},'Stilbeispiele aus dem Archiv ('+stilBeispiele().length+' Abschnitte bereits versendeter Newsletter)'):null),
+      h('ul',{},h('li',{},'Titel und Text dieser Quelle ('+(c.text||'').length+' Zeichen)'),c.url?h('li',{},'der Link der Quelle'):null,c.typ==='mail'&&c.mailBetreff?h('li',{},'der Betreff der Mail'):null,c.hinweisText?h('li',{},'dein Hinweistext (nur zur Prüfung)'):null,c.ergaenzung||dk('e','')?h('li',{},'deine ergänzenden Angaben'):null,stilBeispiele(ziel()).length?h('li',{},'Stilbeispiele aus dem Archiv ('+stilBeispiele(ziel()).length+' Abschnitte bereits versendeter Newsletter)'):null),
       h('div',{},'Nicht gesendet: Absender der Mail. Enthält der Text Namen oder Adressen, gehen sie mit.'),
-      h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>erzeugen(c)},'Jetzt senden'),h('button',{class:'btn',type:'button',onclick:()=>{askIds.delete(c.id);render()}},'Abbrechen'))));
-    else w.append(h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',disabled:genBusy.has(c.id)||!c.text&&!c.url,onclick:()=>{askIds.add(c.id);render()}},genBusy.has(c.id)?'Claude schreibt …':(c.tb?'Neuen Vorschlag erzeugen':'Kurztext vorschlagen')),
+      h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>erzeugen(c,{z:dk('z',zielOf(c)),e:dk('e',c.ergaenzung||'')})},'Jetzt senden'),h('button',{class:'btn',type:'button',onclick:()=>{askIds.delete(c.id);render()}},'Abbrechen'))));
+    else w.append(h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',disabled:genBusy.has(c.id)||!c.text&&!c.url,onclick:()=>{askIds.add(c.id);render()}},genBusy.has(c.id)?'Claude schreibt …':(c.tb?'Neuen Vorschlag erzeugen':(c.rueckfragen||[]).length?'Erneut vorschlagen':'Kurztext vorschlagen')),
       !c.text&&!c.url?h('span',{class:'muted'},'Ohne Quelltext ist kein Vorschlag möglich.'):null));
   }
-  w.append(h('label',{class:'feld'},'Überschrift',tu),h('label',{class:'feld'},'Kurztext',tk,h('span',{id:'z-'+c.id,class:'zahl'+(n>WMAX*1.2||(n&&n<WMIN*.6)?' aus':'')},n+' Wörter (Richtwert '+WMIN+' bis '+WMAX+')')),h('label',{class:'feld'},'Link-Text',tl));
+  w.append(h('label',{class:'feld'},'Überschrift',tu),h('label',{class:'feld'},'Kurztext',tk,h('span',{id:'z-'+c.id,class:'zahl'+(zahlAus(n,ziel())?' aus':'')},zahlTxt(n,ziel()))),h('label',{class:'feld'},'Link-Text',tl));
   if(canWrite!==false)w.append(h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:()=>textSpeichern(c,read())},'Text speichern'),
     c.tb?h('button',{class:'btn'+(tb.freigegeben?'':' primary'),type:'button',onclick:()=>textFreigabe(c,!tb.freigegeben)},tb.freigegeben?'Freigabe zurücknehmen':'Text freigeben'):null));
   const ver=(c.tbVersionen||[]);
@@ -320,7 +340,7 @@ const ART={dafuer:'spricht dafür',dagegen:'spricht dagegen',zusammen:'zusammen 
 const wBereich=()=>'Newsletter';
 const ABLAEUFE="- Eingangskorb: Quellen (Mail, Datei, Web, Notiz) werden von Hand erfasst oder per Mailabruf angelegt. Status `vorschlag`, `kandidat`, `beobachtung`. Mailabruf täglich 23:45 Uhr (Europe/Berlin), liest nur Mails an `aschumann.bdkep+news@gmail.com` (Gmail nur lesen, nie senden, löschen, verschieben, als gelesen markieren), legt `quellen/m-<Gmail-ID>` an, keine Doppelten.\n"+
 "- Ausgaben und Zuordnung: Quellen werden per Knopf einer Ausgabe zugeordnet (`ausgabe`, `position`) oder zurück in den Eingangskorb gelegt. Die Reihenfolge in der Ausgabe bestimmt die Reihenfolge im Newsletter. Beobachtungen sind keine Newsletterthemen.\n"+
-"- Textbausteine: Je Quelle ein Newsletter-Text (Überschrift, Kurztext, Link-Text). Vorschlag per Claude nur nach Klick auf \"Jetzt senden\" mit Vorschau der gesendeten Daten, der Absender der Mail geht nicht mit. Der Vorschlag wird nie automatisch gespeichert oder freigegeben. Jede Speicherung setzt die Freigabe zurück, frühere Fassungen bleiben (höchstens 20). Stilvorgaben in `style.md`: sachlich, keine Werbesprache, keine rhetorischen Fragen, Angaben nur aus der Quelle, fehlende als `[Angabe fehlt]`.\n"+
+"- Textbausteine: Je Quelle ein Newsletter-Text (Überschrift, Kurztext, Link-Text). Vorschlag per Claude nur nach Klick auf \"Jetzt senden\" mit Vorschau der gesendeten Daten, der Absender der Mail geht nicht mit. Der Vorschlag wird nie automatisch gespeichert oder freigegeben. Jede Speicherung setzt die Freigabe zurück, frühere Fassungen bleiben (höchstens 20). Zeichenumfang je Thema einstellbar (`zeichen`, Standard 450, 100 bis 3000, Toleranz ±10 %), ergänzende Angaben (`ergaenzung`) gehen mit. Reichen die Angaben der Quelle nicht, liefert Claude statt eines Textes Rückfragen (`rueckfragen`, höchstens 5), die im Thema angezeigt werden. Stilbeispiele: als Stilvorbild markierte Archiv-Newsletter, sonst die drei jüngsten, je die zwei Abschnitte mit der Länge nächst dem Zielumfang. Stilvorgaben in `style.md`: sachlich, keine Werbesprache, keine rhetorischen Fragen, Angaben nur aus der Quelle, fehlende als `[Angabe fehlt]`.\n"+
 "- Export: Kopieren des Textes der Ausgabe ist da, Vorschau und HTML-Export folgen (Stufe 5), Prüfung in Stufe 6. Der Export enthält nur freigegebene Texte, keine internen Hinweise und Quelldaten.\n"+
 "- Design: Farben, Schrift und Logos kommen aus `design/`, das Dashboard erfindet kein Design.\n"+
 "- Wünsche: Sammlung `wuensche`. Status `offen`, `ausgearbeitet`, `geprueft` (Einbauprüfung gespeichert), `erledigt`, `geschlossen` (nicht umgesetzt; geschlossene Wünsche zählen bei der Einbauprüfung nicht mit). Ausarbeitung (Story, Kriterien, Erfolgsmaß) bestätigt der Autor. Danach ist \"Einbau prüfen\" der feste nächste Schritt; ein ausgearbeiteter Wunsch wird erst nach gespeicherter Einbauprüfung erledigt. Ändert sich die Ausarbeitung, entfällt die Prüfung. Nach Erledigt beantwortet der Autor \"Bewährt?\". Ein Wunsch wird von einer Person erledigt, nie vom Agenten.\n"+
@@ -724,12 +744,15 @@ const ausSort=(x,y)=>(x.versanddatum&&y.versanddatum?x.versanddatum.localeCompar
 const abschnitteOf=n=>Array.isArray(n&&n.abschnitte)?n.abschnitte.filter(a=>a&&(a.ueberschrift||a.text)):[];
 const archivText=n=>(n.name||'Newsletter')+(n.versanddatum?' ('+fmtD.format(new Date(n.versanddatum+'T12:00:00'))+')':'')+'\n\n'+(n.einleitung?n.einleitung+'\n\n':'')+abschnitteOf(n).map((a,i)=>(i+1)+'. '+a.ueberschrift+'\n'+a.text).join('\n\n');
 const archivVolltext=n=>[n.name,n.titel,n.einleitung,n.notiz,...abschnitteOf(n).flatMap(a=>[a.ueberschrift,a.text])].filter(Boolean).join('\n');
-const stilBeispiele=()=>archiv.filter(n=>n.stilvorbild).sort((x,y)=>(y.versanddatum||'').localeCompare(x.versanddatum||'')).slice(0,3)
-  .flatMap(n=>abschnitteOf(n).slice(0,2).map(a=>'Überschrift: '+a.ueberschrift+'\nKurztext: '+String(a.text||'').slice(0,900)));
-function stilPrompt(){
-  const bsp=stilBeispiele(),i=STIL.lastIndexOf('Antworte ausschließlich mit JSON');
-  if(!bsp.length||i<0)return STIL;
-  return STIL.slice(0,i)+'Stilvorbilder aus bereits versendeten Newslettern (nur Aufbau, Ton, Satzbau und Grammatik übernehmen, keine Angaben):\n'+bsp.join('\n')+'\n'+STIL.slice(i);
+/* Stilbeispiele: als Stilvorbild markierte Newsletter, sonst die drei jüngsten; je Newsletter die zwei Abschnitte, deren Länge dem Zielumfang am nächsten kommt */
+const stilBeispiele=z=>{
+  const alle=archiv.filter(n=>abschnitteOf(n).length).sort((x,y)=>(y.versanddatum||'').localeCompare(x.versanddatum||'')),mark=alle.filter(n=>n.stilvorbild);
+  return (mark.length?mark:alle).slice(0,3).flatMap(n=>abschnitteOf(n).slice().sort((x,y)=>Math.abs(String(x.text||'').length-z)-Math.abs(String(y.text||'').length-z)).slice(0,2)
+    .map(a=>'Überschrift: '+a.ueberschrift+'\nKurztext: '+String(a.text||'').slice(0,Math.max(900,z*2))));
+};
+function stilPrompt(z){
+  const bsp=stilBeispiele(z);
+  return STIL_KOPF+(bsp.length?'Stilvorbilder aus bereits versendeten Newslettern des Verbands (Aufbau, Ton, Satzbau, Wortwahl und Grammatik übernehmen, keine Angaben):\n'+bsp.join('\n')+'\n':STIL_BSP)+STIL_ENDE(z);
 }
 /* Abschnitte aus einem versendeten HTML-Newsletter lesen: je Überschrift (h2) ein Abschnitt aus den Absätzen, Listen und Hervorhebungen des umgebenden Blocks */
 function abschnitteAusHtml(src){
@@ -774,7 +797,7 @@ function uebernehmen(n,a,ausId){
 function archivStat(){
   const ab=archiv.flatMap(abschnitteOf);if(!archiv.length||!ab.length)return null;
   const avg=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):0;
-  return{abschnitte:avg(archiv.map(n=>abschnitteOf(n).length)),woerter:avg(ab.map(a=>WORDS(a.text))),ueberschrift:avg(ab.map(a=>WORDS(a.ueberschrift)))};
+  return{abschnitte:avg(archiv.map(n=>abschnitteOf(n).length)),woerter:avg(ab.map(a=>WORDS(a.text))),zeichen:avg(ab.map(a=>String(a.text||'').length)),ueberschrift:avg(ab.map(a=>WORDS(a.ueberschrift)))};
 }
 function archivKarte(n){
   const isOpen=aOpen.has(n.id),ab=abschnitteOf(n),canAct=canWrite!==false,flip=()=>{isOpen?aOpen.delete(n.id):aOpen.add(n.id);render()};

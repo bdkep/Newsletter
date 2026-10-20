@@ -13,13 +13,17 @@ Datenbank-Sammlungen (Artifact-DB):
 - `wuensche`: Wünsche zum Dashboard (text, von, status `offen|ausgearbeitet|geprueft|erledigt|geschlossen`, story, kriterien, erfolgsmass, pruefung, vorgabe, bewaehrt, kommentare, neuFuer, verlauf)
 - `ausgaben`: name, versanddatum (JJJJ-MM-TT), versandzeit (optional), notiz, status (`planung|versendet`), reihenfolge
 - `archiv`: bereits versendete Newsletter: name, versanddatum, titel, einleitung, abschnitte (ueberschrift, text, linkText, url), abbinder, stilvorbild, notiz, quelle (`import|hand|ausgabe`)
-- Textbausteine liegen im Dokument der Quelle (`tb`, `tbVersionen`)
+- Textbausteine liegen im Dokument der Quelle (`tb`, `tbVersionen`); je Thema außerdem `zeichen` (Zielumfang), `ergaenzung` (ergänzende Angaben), `rueckfragen` (offene Fragen von Claude)
 
 ## Versandplan und Archiv
 
 Reiter „Versandplan“: Versandtermine neuer Ausgaben anlegen (Name, Datum, optional Uhrzeit, Notiz), ändern und löschen (nur ohne Themen). Jede neue Ausgabe braucht einen Termin, auch beim Anlegen im Eingangskorb. Der Termin ist im Versandplan und direkt in der Ausgabe änderbar. Die Ausgaben stehen nach Termin aufsteigend (spätester zuletzt), Bestand ohne Termin am Ende und markiert, überschrittene Termine rot. „Als versendet ins Archiv“ legt die freigegebenen Texte als Newsletter im Archiv ab und nimmt die Ausgabe aus Planung und Zuordnung.
 
 Reiter „Archiv“: bereits versendete Newsletter zum Nachschlagen, Durchsuchen und Kopieren. Neue Newsletter lassen sich als Text oder aus einer HTML-Datei einlesen (je `h2` ein Abschnitt). Einzelne Abschnitte gehen per „Als Entwurf übernehmen“ in eine geplante Ausgabe, nie freigegeben und mit Hinweis zur Aktualitätsprüfung. Newsletter mit „Stilvorbild“ gehen mit höchstens 3 Newslettern und je 2 Abschnitten als Beispiele in den Claude-Vorschlag (steht in der Sendevorschau). Die Kennzahl „Üblicher Aufbau“ zeigt Abschnitte je Newsletter, Wörter je Abschnitt und Wörter je Überschrift. Eingelesen ist der Newsletter vom 30.09.2026 (`design/beispiel-newsletter-2026-09-30.html`).
+
+## Textvorschlag je Thema
+
+Jedes Thema (Quelle) hat unter „Details“ den Bereich „Newsletter-Text“. Dort wird der Umfang in Zeichen eingestellt (Eingabefeld oder 300/500/800, Standard 450, Toleranz ±10 %); die Anzeige unter dem Kurztext zählt Zeichen gegen das Ziel. Der Vorschlag orientiert sich an den Newslettern im Archiv (Stilvorbilder, sonst die drei jüngsten; je Newsletter die zwei Abschnitte mit der Länge nächst dem Ziel). Reichen die Angaben der Quelle nicht, schreibt Claude keinen Text, sondern stellt bis zu 5 Rückfragen. Antworten kommen in das Feld „Ergänzende Angaben“, danach „Erneut vorschlagen“. Gespeichert und freigegeben wird nur nach Bestätigung durch die Person.
 
 ## Wünsche
 

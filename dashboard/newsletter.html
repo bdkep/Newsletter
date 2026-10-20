@@ -75,6 +75,9 @@ textarea{min-height:96px;resize:vertical}
 .senden{border:1px solid var(--gold);background:var(--warn-bg);padding:12px 14px;font-size:13px;line-height:1.5;color:var(--warn-ink);display:flex;flex-direction:column;gap:8px}
 .senden ul{margin:0;padding-left:18px}
 .tb-vorschau{font-size:14px;color:var(--ink)}
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:20;min-height:48px;padding:0 20px;border-radius:2px;font-size:14px;font-weight:700;background:var(--gold);color:var(--navy);border:1px solid var(--navy);display:inline-flex;align-items:center;gap:8px}
+.fab .plus{font-size:20px;line-height:1}
+@media (max-width:520px){.fab{padding:0 16px}.fab .txt{display:none}.fab{min-width:48px;justify-content:center}}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--navy);color:#fff;padding:10px 16px;font-size:14px;max-width:90vw;border-left:4px solid var(--gold)}
 .tabs{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:24px}
 .tabs .person{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
@@ -463,6 +466,12 @@ function wPruefPanel(w){
         sample&&wPruefRecht(w)&&WOPEN(w)?h('button',{class:'btn',type:'button',onclick:()=>wunschPruefen(w)},'Neu prüfen'):null));
   }
   return null;
+}
+/* Schwebender Knopf: von jedem Reiter direkt ins Formular "Wunsch eintragen" */
+function wunschSchnell(){
+  view='wuensche';lsSet('nl.view',view);wForm=true;render();
+  const t=document.getElementById('wunsch-neu');
+  if(t){t.scrollIntoView({block:'center'});t.focus()}
 }
 async function wunschAnlegen(text){
   text=(text||'').trim();
@@ -955,6 +964,7 @@ function render(){
           h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:neueAusgabe},'Ausgabe anlegen'),h('button',{class:'btn',type:'button',onclick:()=>{newIssue=false;render()}},'Abbrechen'))):
           h('button',{class:'btn',type:'button',style:'align-self:flex-start',onclick:()=>{newIssue=true;render()}},'Ausgabe anlegen'),
         h('p',{class:'hinweis-fuss'},'Die Reihenfolge in einer Ausgabe bestimmt die Reihenfolge im Newsletter. Vorschau und Export als HTML folgen in der nächsten Stufe.'))),
+    canWrite!==false&&!(view==='wuensche'&&wForm)?h('button',{class:'fab',type:'button','aria-label':'Wunsch eintragen',title:'Wunsch eintragen',onclick:wunschSchnell},h('span',{class:'plus','aria-hidden':'true'},'+'),h('span',{class:'txt'},'Wunsch')):null,
     toastMsg?h('div',{class:'toast',role:'status'},toastMsg):null);
   const l2=document.querySelector('.liste');if(l2)l2.scrollTop=st;
   if(id){const e=document.getElementById(id);if(e){e.focus();try{if(pos!=null)e.setSelectionRange(pos,pos)}catch(_){}}}

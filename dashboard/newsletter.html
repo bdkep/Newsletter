@@ -102,7 +102,7 @@ function h(tag,attrs,...kids){const e=document.createElement(tag);
   for(const c of kids.flat()){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(String(c)))}return e}
 
 let db=null,canWrite=null,items=[],ausgaben=[],loaded=false,filter='alle',showNew=false,newTyp='note',newIssue=false,toastMsg='',toastT=0,busy=false;
-const openIds=new Set(),delIds=new Set(),drafts={},askIds=new Set(),genBusy=new Set(),vorschlagIds=new Set();
+const openIds=new Set(),textOpen=new Set(),delIds=new Set(),drafts={},askIds=new Set(),genBusy=new Set(),vorschlagIds=new Set();
 let sample=null;
 const WORDS=t=>((t||'').trim().match(/\S+/g)||[]).length;
 const ZMIN=100,ZMAX=3000,ZSTD=450;
@@ -255,6 +255,8 @@ function formular(){
 }
 const warnBox=c=>c.hinweisText?h('div',{class:'warn '+(c.hinweisArt==='crit'?'crit':'warn-k')},h('strong',{},'Hinweis:'),' '+c.hinweisText):null;
 
+const textToggle=c=>h('button',{class:'btn'+(textOpen.has(c.id)?'':' primary'),type:'button','aria-expanded':String(textOpen.has(c.id)),onclick:()=>{textOpen.has(c.id)?textOpen.delete(c.id):textOpen.add(c.id);render()}},textOpen.has(c.id)?'Text zuklappen':(c.tb?'Text bearbeiten':'Text schreiben'));
+const textBadge=c=>h('div',{class:'zeile'},h('span',{class:'badge',style:!c.tb?'background:#E8EBEF;color:#2B3440':c.tb.freigegeben?'background:#E1F1E9;color:#1E5A40':'background:#FFF6DD;color:#4A3608'},!c.tb?'Text fehlt':c.tb.freigegeben?'Text freigegeben':'Text im Entwurf'));
 function karte(c){
   const s=SRC[c.typ]||SRC.note,isOpen=openIds.has(c.id),flip=()=>{isOpen?openIds.delete(c.id):openIds.add(c.id);render()};
   const neu=c.quelle==='mail'&&!c.ausgabe&&status(c)==='vorschlag';
@@ -279,11 +281,12 @@ function karte(c){
           if(ok)['t','s','a','h'].forEach(k=>delete drafts[c.id+'.'+k])}},'Änderungen speichern')));
     }
   }
-  if(isOpen)el.append(textPanel(c));
+  if(status(c)!=='beobachtung')el.append(textBadge(c));
+  if(textOpen.has(c.id))el.append(textPanel(c));
   if(canWrite!==false&&status(c)!=='beobachtung'){
     el.append(h('div',{class:'knoepfe'},aktiv().map(a=>h('button',{class:'btn',type:'button',onclick:()=>zuordnen(c,a.id)},'In Ausgabe '+a.name.replace(/\s*\d{4}$/,'')))));
   }else if(status(c)==='beobachtung')el.append(h('div',{class:'muted'},'Beobachtung, kein Newsletterthema.'));
-  el.append(h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button','aria-expanded':String(isOpen),onclick:flip},isOpen?'Weniger anzeigen':'Details'),
+  el.append(h('div',{class:'knoepfe'},status(c)!=='beobachtung'?textToggle(c):null,h('button',{class:'btn',type:'button','aria-expanded':String(isOpen),onclick:flip},isOpen?'Weniger anzeigen':'Details'),
     canWrite===false?null:delIds.has(c.id)?[h('button',{class:'btn danger',type:'button',onclick:()=>loeschen(c)},'Wirklich löschen'),h('button',{class:'btn',type:'button',onclick:()=>{delIds.delete(c.id);render()}},'Abbrechen')]:
       h('button',{class:'btn danger',type:'button',onclick:()=>{delIds.add(c.id);render()}},'Löschen')));
   return el;
@@ -302,9 +305,8 @@ function ausgabePanel(a){
       l.map((c,i)=>{const s=SRC[c.typ]||SRC.note;return h('div',{class:'pos'},
         h('div',{class:'zeile'},h('span',{class:'nr'},'Position '+(i+1)),h('span',{class:'badge',style:s.s},s.l)),
         h('div',{class:'t'},(c.tb&&c.tb.ueberschrift)||c.titel||'Ohne Titel'),c.tb&&c.tb.kurztext?h('div',{class:'tb-vorschau'},kurz(c.tb.kurztext,200)):null,h('div',{class:'zeile'},h('span',{class:'badge',style:!c.tb?'background:#E8EBEF;color:#2B3440':c.tb.freigegeben?'background:#E1F1E9;color:#1E5A40':'background:#FFF6DD;color:#4A3608'},!c.tb?'Text fehlt':c.tb.freigegeben?'Text freigegeben':'Text im Entwurf')),warnBox(c),
-        openIds.has(c.id)?textPanel(c):null,
-        h('div',{class:'knoepfe'},
-          h('button',{class:'btn'+(openIds.has(c.id)?'':' primary'),type:'button','aria-expanded':String(openIds.has(c.id)),onclick:()=>{openIds.has(c.id)?openIds.delete(c.id):openIds.add(c.id);render()}},openIds.has(c.id)?'Text zuklappen':(c.tb?'Text bearbeiten':'Text schreiben')),
+        textOpen.has(c.id)?textPanel(c):null,
+        h('div',{class:'knoepfe'},textToggle(c),
           canWrite===false?null:h('button',{class:'btn',type:'button',disabled:i===0,onclick:()=>hoch(c)},'Nach oben'),
           canWrite===false?null:h('button',{class:'btn',type:'button',onclick:()=>freigeben(c)},'Zurück in den Eingangskorb')))})));
 }
@@ -342,7 +344,7 @@ const ART={dafuer:'spricht dafür',dagegen:'spricht dagegen',zusammen:'zusammen 
 const wBereich=()=>'Newsletter';
 const ABLAEUFE="- Eingangskorb: Quellen (Mail, Datei, Web, Notiz) werden von Hand erfasst oder per Mailabruf angelegt. Status `vorschlag`, `kandidat`, `beobachtung`. Mailabruf täglich 23:45 Uhr (Europe/Berlin), liest nur Mails an `aschumann.bdkep+news@gmail.com` (Gmail nur lesen, nie senden, löschen, verschieben, als gelesen markieren), legt `quellen/m-<Gmail-ID>` an, keine Doppelten.\n"+
 "- Ausgaben und Zuordnung: Quellen werden per Knopf einer Ausgabe zugeordnet (`ausgabe`, `position`) oder zurück in den Eingangskorb gelegt. Die Reihenfolge in der Ausgabe bestimmt die Reihenfolge im Newsletter. Beobachtungen sind keine Newsletterthemen.\n"+
-"- Textbausteine: Je Quelle ein Newsletter-Text (Überschrift, Kurztext, Link-Text). Vorschlag per Claude nur nach Klick auf \"Jetzt senden\" mit Vorschau der gesendeten Daten, der Absender der Mail geht nicht mit. Der Vorschlag wird nie automatisch gespeichert oder freigegeben. Jede Speicherung setzt die Freigabe zurück, frühere Fassungen bleiben (höchstens 20). Zeichenumfang je Thema einstellbar (`zeichen`, Standard 450, 100 bis 3000, Toleranz ±10 %), ergänzende Angaben (`ergaenzung`) gehen mit. Reichen die Angaben der Quelle nicht, liefert Claude statt eines Textes Rückfragen (`rueckfragen`, höchstens 5), die im Thema angezeigt werden. Stilbeispiele: als Stilvorbild markierte Archiv-Newsletter, sonst die drei jüngsten, je die zwei Abschnitte mit der Länge nächst dem Zielumfang. Stilvorgaben in `style.md`: sachlich, keine Werbesprache, keine rhetorischen Fragen, Angaben nur aus der Quelle, fehlende als `[Angabe fehlt]`.\n"+
+"- Textbausteine: Je Quelle ein Newsletter-Text (Überschrift, Kurztext, Link-Text). Der Textbereich steht im Eingangskorb und in der Ausgabe (Knopf „Text schreiben“) und wandert als Teil der Quelle mit, wenn sie einer Ausgabe zugeordnet oder zurückgelegt wird. Vorschlag per Claude nur nach Klick auf \"Jetzt senden\" mit Vorschau der gesendeten Daten, der Absender der Mail geht nicht mit. Der Vorschlag wird nie automatisch gespeichert oder freigegeben. Jede Speicherung setzt die Freigabe zurück, frühere Fassungen bleiben (höchstens 20). Zeichenumfang je Thema einstellbar (`zeichen`, Standard 450, 100 bis 3000, Toleranz ±10 %), ergänzende Angaben (`ergaenzung`) gehen mit. Reichen die Angaben der Quelle nicht, liefert Claude statt eines Textes Rückfragen (`rueckfragen`, höchstens 5), die im Thema angezeigt werden. Stilbeispiele: als Stilvorbild markierte Archiv-Newsletter, sonst die drei jüngsten, je die zwei Abschnitte mit der Länge nächst dem Zielumfang. Stilvorgaben in `style.md`: sachlich, keine Werbesprache, keine rhetorischen Fragen, Angaben nur aus der Quelle, fehlende als `[Angabe fehlt]`.\n"+
 "- Export: Kopieren des Textes der Ausgabe ist da, Vorschau und HTML-Export folgen (Stufe 5), Prüfung in Stufe 6. Der Export enthält nur freigegebene Texte, keine internen Hinweise und Quelldaten.\n"+
 "- Design: Farben, Schrift und Logos kommen aus `design/`, das Dashboard erfindet kein Design.\n"+
 "- Wünsche: Sammlung `wuensche`. Status `offen`, `ausgearbeitet`, `geprueft` (Einbauprüfung gespeichert), `erledigt`, `geschlossen` (nicht umgesetzt; geschlossene Wünsche zählen bei der Einbauprüfung nicht mit). Ausarbeitung (Story, Kriterien, Erfolgsmaß) bestätigt der Autor. Danach ist \"Einbau prüfen\" der feste nächste Schritt; ein ausgearbeiteter Wunsch wird erst nach gespeicherter Einbauprüfung erledigt. Ändert sich die Ausarbeitung, entfällt die Prüfung. Nach Erledigt beantwortet der Autor \"Bewährt?\". Ein Wunsch wird von einer Person erledigt, nie vom Agenten.\n"+

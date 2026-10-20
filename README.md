@@ -23,7 +23,7 @@ Reiter „Archiv“: bereits versendete Newsletter zum Nachschlagen, Durchsuchen
 
 ## Textvorschlag je Thema
 
-Jedes Thema hat den Bereich „Newsletter-Text“ (im Eingangskorb unter „Details“, in einer Ausgabe über „Text schreiben“ bzw. „Text bearbeiten“). Dort wird der Umfang in Zeichen eingestellt (Eingabefeld oder 300/500/800, Standard 450, Toleranz ±10 %); die Anzeige unter dem Kurztext zählt Zeichen gegen das Ziel. Der Vorschlag orientiert sich an den Newslettern im Archiv (Stilvorbilder, sonst die drei jüngsten; je Newsletter die zwei Abschnitte mit der Länge nächst dem Ziel). Reichen die Angaben der Quelle nicht, schreibt Claude keinen Text, sondern stellt bis zu 5 Rückfragen. Antworten kommen in das Feld „Ergänzende Angaben“, danach „Erneut vorschlagen“. Gespeichert und freigegeben wird nur nach Bestätigung durch die Person.
+Jedes Thema hat den Bereich „Newsletter-Text“ (im Eingangskorb und in der Ausgabe über „Text schreiben“ bzw. „Text bearbeiten“; der Text gehört zur Quelle und wandert mit ihr). Dort wird der Umfang in Zeichen eingestellt (Eingabefeld oder 300/500/800, Standard 450, Toleranz ±10 %); die Anzeige unter dem Kurztext zählt Zeichen gegen das Ziel. Der Vorschlag orientiert sich an den Newslettern im Archiv (Stilvorbilder, sonst die drei jüngsten; je Newsletter die zwei Abschnitte mit der Länge nächst dem Ziel). Reichen die Angaben der Quelle nicht, schreibt Claude keinen Text, sondern stellt bis zu 5 Rückfragen. Antworten kommen in das Feld „Ergänzende Angaben“, danach „Erneut vorschlagen“. Gespeichert und freigegeben wird nur nach Bestätigung durch die Person.
 
 ## Wünsche
 

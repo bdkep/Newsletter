@@ -302,9 +302,11 @@ function ausgabePanel(a){
       l.map((c,i)=>{const s=SRC[c.typ]||SRC.note;return h('div',{class:'pos'},
         h('div',{class:'zeile'},h('span',{class:'nr'},'Position '+(i+1)),h('span',{class:'badge',style:s.s},s.l)),
         h('div',{class:'t'},(c.tb&&c.tb.ueberschrift)||c.titel||'Ohne Titel'),c.tb&&c.tb.kurztext?h('div',{class:'tb-vorschau'},kurz(c.tb.kurztext,200)):null,h('div',{class:'zeile'},h('span',{class:'badge',style:!c.tb?'background:#E8EBEF;color:#2B3440':c.tb.freigegeben?'background:#E1F1E9;color:#1E5A40':'background:#FFF6DD;color:#4A3608'},!c.tb?'Text fehlt':c.tb.freigegeben?'Text freigegeben':'Text im Entwurf')),warnBox(c),
-        canWrite===false?null:h('div',{class:'knoepfe'},
-          h('button',{class:'btn',type:'button',disabled:i===0,onclick:()=>hoch(c)},'Nach oben'),
-          h('button',{class:'btn',type:'button',onclick:()=>freigeben(c)},'Zurück in den Eingangskorb')))})));
+        openIds.has(c.id)?textPanel(c):null,
+        h('div',{class:'knoepfe'},
+          h('button',{class:'btn'+(openIds.has(c.id)?'':' primary'),type:'button','aria-expanded':String(openIds.has(c.id)),onclick:()=>{openIds.has(c.id)?openIds.delete(c.id):openIds.add(c.id);render()}},openIds.has(c.id)?'Text zuklappen':(c.tb?'Text bearbeiten':'Text schreiben')),
+          canWrite===false?null:h('button',{class:'btn',type:'button',disabled:i===0,onclick:()=>hoch(c)},'Nach oben'),
+          canWrite===false?null:h('button',{class:'btn',type:'button',onclick:()=>freigeben(c)},'Zurück in den Eingangskorb')))})));
 }
 /* ---- Wünsche: Ideen zur Weiterentwicklung des Dashboards (Logik wie im Sekretariat-Dashboard) ----
    Sammlung `wuensche`: text, von, bereich, status (offen | ausgearbeitet | geprueft | erledigt | geschlossen), story, kriterien, erfolgsmass,

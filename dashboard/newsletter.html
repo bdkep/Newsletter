@@ -106,7 +106,9 @@ function h(tag,attrs,...kids){const e=document.createElement(tag);
 
 let db=null,canWrite=null,items=[],ausgaben=[],loaded=false,filter='alle',showNew=false,newTyp='note',newIssue=false,toastMsg='',toastT=0,busy=false;
 const openIds=new Set(),textOpen=new Set(),delIds=new Set(),drafts={},askIds=new Set(),genBusy=new Set(),vorschlagIds=new Set();
-let sample=null;
+let sample=null,lastTier='';
+const TIERS={quick:'schnell (Haiku)',default:'Standard (Sonnet)',complex:'leistungsstark (Opus)'};
+const tierTxt=r=>{const t=r&&r.modelTierApplied;return t?' Modellstufe: '+(TIERS[t]||t)+'.':''};
 const WORDS=t=>((t||'').trim().match(/\S+/g)||[]).length;
 const ZMIN=100,ZMAX=3000,ZSTD=450;
 const zielOf=c=>{const z=parseInt(c&&c.zeichen,10);return z>=ZMIN&&z<=ZMAX?z:ZSTD};
@@ -139,13 +141,14 @@ async function erzeugen(c,f){
   try{
     const r=await sample(stilPrompt(z)+'\n\n--- Quelle ---\n'+quellText(c),{cache:false,modelTier:'default'});
     const m=String((r&&r.text)||'').match(/\{[\s\S]*\}/);const j=JSON.parse(m?m[0]:'');
+    const tt=tierTxt(r);
     const fragen=(Array.isArray(j.rueckfragen)?j.rueckfragen:[]).map(x=>String(x||'').trim()).filter(Boolean).slice(0,5);
     const patch={zeichen:z,ergaenzung:erg,rueckfragen:j.status==='rueckfragen'&&fragen.length?fragen:[]};
     await db.doc('quellen/'+c.id).update(patch);
-    if(patch.rueckfragen.length){delete drafts[c.id+'.e'];toast('Für einen Textvorschlag fehlen Angaben. Die Rückfragen stehen unter „Newsletter-Text“.',7000)}
+    if(patch.rueckfragen.length){delete drafts[c.id+'.e'];toast('Für einen Textvorschlag fehlen Angaben. Die Rückfragen stehen unter „Newsletter-Text“.'+tt,7000)}
     else{
       drafts[c.id+'.tu']=String(j.ueberschrift||'').trim();drafts[c.id+'.tk']=String(j.kurztext||'').trim();drafts[c.id+'.tl']=String(j.linkText||'').trim();
-      vorschlagIds.add(c.id);toast('Vorschlag liegt vor. Bitte prüfen, anpassen und speichern.',5000);
+      vorschlagIds.add(c.id);toast('Vorschlag liegt vor. Bitte prüfen, anpassen und speichern.'+tt,6000);
     }
   }catch(e){toast(e&&e.code==='not_granted'?'Die Texterzeugung wurde nicht erlaubt.':'Kein Vorschlag erhalten. Bitte erneut versuchen oder von Hand schreiben.')}
   finally{genBusy.delete(c.id);render()}
@@ -376,6 +379,7 @@ const wm=(w,fn,log,ok)=>mutateIn('wuensche',w.id,fn,log,ok);
 async function sampleJson(prompt,ctl){
   const r=await sample(prompt,{cache:false,modelTier:'default'});
   if(ctl&&ctl.aborted)throw {code:'cancelled'};
+  lastTier=tierTxt(r);
   const m=String((r&&r.text)||'').match(/\{[\s\S]*\}/);
   try{return JSON.parse(m?m[0]:'')}catch(e){throw {code:'invalid_json'}}
 }
@@ -427,7 +431,7 @@ async function wunschPruefen(w){
     Object.keys(drafts).filter(k=>k.startsWith(w.id+'.wf')).forEach(k=>delete drafts[k]);
     delete drafts[w.id+'.wvorgabe'];
     wPr[w.id]={res,geklaert:gek,vorgabe:res.fragen.length?null:vorgabeBauen(w,res,gek)};
-    toast(res.fragen.length?'Die Prüfung hat Rückfragen. Bitte beantworten, dann geht es weiter.':'Prüfung ist da. Bitte Vorgabe lesen, bei Bedarf ändern und speichern.',6000);
+    toast((res.fragen.length?'Die Prüfung hat Rückfragen. Bitte beantworten, dann geht es weiter.':'Prüfung ist da. Bitte Vorgabe lesen, bei Bedarf ändern und speichern.')+lastTier,6000);
   }catch(e){
     const c=e&&e.code;
     if(c!=='cancelled')toast(c==='not_granted'?'Claude wurde nicht freigegeben.':c==='rate_limited'?'Gerade zu viele Anfragen an Claude. Bitte später noch einmal versuchen.':c==='invalid_json'?'Die Prüfung war nicht lesbar. Du kannst es noch einmal versuchen.':'Claude hat nicht geantwortet. Du kannst es noch einmal versuchen.',7000);

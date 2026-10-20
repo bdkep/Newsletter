@@ -84,6 +84,10 @@ textarea{min-height:96px;resize:vertical}
 .tabs .person select{width:auto;min-width:140px}
 .pill{font-size:12px;font-weight:700;padding:2px 8px;background:#E8EBEF;color:#2B3440}
 .pill.neu{background:var(--navy);color:#fff}.pill.ok{background:#E1F1E9;color:#1E5A40}.pill.warn{background:var(--warn-bg);color:var(--warn-ink)}.pill.bad{background:var(--crit-bg);color:var(--crit-ink)}.pill.neutral{background:#E8EBEF;color:#566070}
+article.k>.kbody{display:flex;flex-direction:column;gap:10px;min-width:0}
+.kkopf{display:flex;gap:10px;align-items:flex-start;cursor:pointer;min-height:44px}
+.kkopf .chev{color:var(--navy);font-size:16px;line-height:1.35;width:14px;flex:none}
+.kkopf .kinfo{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
 article.k.fuer-mich{border-left:4px solid var(--gold)}
 ul.hist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px}
 ul.hist li{display:flex;flex-wrap:wrap;gap:4px 10px;overflow-wrap:anywhere}ul.hist .t{color:var(--muted);font-size:12px;min-width:16px}
@@ -105,7 +109,7 @@ function h(tag,attrs,...kids){const e=document.createElement(tag);
   for(const c of kids.flat()){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(String(c)))}return e}
 
 let db=null,canWrite=null,items=[],ausgaben=[],loaded=false,filter='alle',showNew=false,newTyp='note',newIssue=false,toastMsg='',toastT=0,busy=false;
-const openIds=new Set(),textOpen=new Set(),delIds=new Set(),drafts={},askIds=new Set(),genBusy=new Set(),vorschlagIds=new Set();
+const cardOpenIds=new Set(),openIds=new Set(),textOpen=new Set(),delIds=new Set(),drafts={},askIds=new Set(),genBusy=new Set(),vorschlagIds=new Set();
 let sample=null;
 const WORDS=t=>((t||'').trim().match(/\S+/g)||[]).length;
 const ZMIN=100,ZMAX=3000,ZSTD=450;
@@ -263,35 +267,38 @@ const textBadge=c=>h('div',{class:'zeile'},h('span',{class:'badge',style:!c.tb?'
 function karte(c){
   const s=SRC[c.typ]||SRC.note,isOpen=openIds.has(c.id),flip=()=>{isOpen?openIds.delete(c.id):openIds.add(c.id);render()};
   const neu=c.quelle==='mail'&&!c.ausgabe&&status(c)==='vorschlag';
-  const el=h('article',{class:'k'});
-  el.append(h('div',{class:'zeile'},h('span',{class:'badge',style:s.s},s.l),c.quelle==='mail'?h('span',{class:'muted'},'per Mailabruf'):null,h('span',{class:'muted'},STATUS[status(c)]+(neu?' · neu':'')),h('span',{class:'muted',style:'margin-left:auto'},'erfasst '+dat(c.erfasstAm))));
-  el.append(h('h3',{},c.titel||'Ohne Titel'));
-  if(c.text)el.append(h('p',{},isOpen?'':kurz(c.text,240)));
-  const w=warnBox(c);if(w)el.append(w);
-  el.append(h('div',{class:'meta'},metaText(c)));
+  const el=h('article',{class:'k'}),body=h('div',{class:'kbody'}),aufg=cardOpenIds.has(c.id);
+  const kopf=h('div',{class:'kkopf',role:'button',tabindex:'0','aria-expanded':String(aufg),title:aufg?'Beitrag einklappen':'Beitrag ausklappen',onclick:()=>{aufg?cardOpenIds.delete(c.id):cardOpenIds.add(c.id);render()},onkeydown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.currentTarget.click()}}});
+  kopf.append(h('span',{class:'chev','aria-hidden':'true'},aufg?'▾':'▸'),h('div',{class:'kinfo'},h('div',{class:'zeile'},h('span',{class:'badge',style:s.s},s.l),c.quelle==='mail'?h('span',{class:'muted'},'per Mailabruf'):null,h('span',{class:'muted'},STATUS[status(c)]+(neu?' · neu':'')),h('span',{class:'muted',style:'margin-left:auto'},'erfasst '+dat(c.erfasstAm))),h('h3',{},c.titel||'Ohne Titel')));
+  el.append(kopf);
+  if(!aufg)return el;
+  if(c.text)body.append(h('p',{},isOpen?'':kurz(c.text,240)));
+  const w=warnBox(c);if(w)body.append(w);
+  body.append(h('div',{class:'meta'},metaText(c)));
   if(isOpen){
-    if(c.text)el.querySelector('p').replaceWith(h('pre',{class:'volltext'},c.text));
-    if(c.url)el.append(h('a',{href:c.url,target:'_blank',rel:'noopener noreferrer',style:'font-size:13px;color:var(--navy)'},'Link öffnen'));
+    if(c.text)body.querySelector('p').replaceWith(h('pre',{class:'volltext'},c.text));
+    if(c.url)body.append(h('a',{href:c.url,target:'_blank',rel:'noopener noreferrer',style:'font-size:13px;color:var(--navy)'},'Link öffnen'));
     if(canWrite!==false){
       const dk=(k,d)=>drafts[c.id+'.'+k]!==undefined?drafts[c.id+'.'+k]:d,set=k=>e=>{drafts[c.id+'.'+k]=e.target.value};
       const ti=h('input',{id:'e-t-'+c.id,oninput:set('t')});ti.value=dk('t',c.titel||'');
       const st=h('select',{id:'e-s-'+c.id,onchange:set('s')},Object.keys(STATUS).map(k=>h('option',{value:k,selected:k===dk('s',status(c))},STATUS[k])));
       const ha=h('select',{id:'e-a-'+c.id,onchange:set('a')},[['','Kein Hinweis'],['warn','Hinweis'],['crit','Frist oder Termin vorbei']].map(([k,l])=>h('option',{value:k,selected:k===dk('a',c.hinweisArt||'')},l)));
       const ht=h('textarea',{id:'e-h-'+c.id,style:'min-height:64px',oninput:set('h')});ht.value=dk('h',c.hinweisText||'');
-      el.append(h('div',{class:'raster'},h('label',{class:'feld breit'},'Titel',ti),h('label',{class:'feld'},'Status',st),h('label',{class:'feld'},'Hinweisart',ha),h('label',{class:'feld breit'},'Hinweistext (z. B. abgelaufene Frist, offene Prüfung)',ht)),
+      body.append(h('div',{class:'raster'},h('label',{class:'feld breit'},'Titel',ti),h('label',{class:'feld'},'Status',st),h('label',{class:'feld'},'Hinweisart',ha),h('label',{class:'feld breit'},'Hinweistext (z. B. abgelaufene Frist, offene Prüfung)',ht)),
         h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:async()=>{
           const ok=await upd(c,{titel:(dk('t',c.titel)||'').trim()||c.titel,status:dk('s',status(c)),hinweisArt:dk('a',c.hinweisArt||''),hinweisText:(dk('h',c.hinweisText||'')||'').trim()},'Gespeichert.');
           if(ok)['t','s','a','h'].forEach(k=>delete drafts[c.id+'.'+k])}},'Änderungen speichern')));
     }
   }
-  if(status(c)!=='beobachtung')el.append(textBadge(c));
-  if(textOpen.has(c.id))el.append(textPanel(c));
+  if(status(c)!=='beobachtung')body.append(textBadge(c));
+  if(textOpen.has(c.id))body.append(textPanel(c));
   if(canWrite!==false&&status(c)!=='beobachtung'){
-    el.append(h('div',{class:'knoepfe'},aktiv().map(a=>h('button',{class:'btn',type:'button',onclick:()=>zuordnen(c,a.id)},'In Ausgabe '+a.name.replace(/\s*\d{4}$/,'')))));
-  }else if(status(c)==='beobachtung')el.append(h('div',{class:'muted'},'Beobachtung, kein Newsletterthema.'));
-  el.append(h('div',{class:'knoepfe'},status(c)!=='beobachtung'?textToggle(c):null,h('button',{class:'btn',type:'button','aria-expanded':String(isOpen),onclick:flip},isOpen?'Weniger anzeigen':'Details'),
+    body.append(h('div',{class:'knoepfe'},aktiv().map(a=>h('button',{class:'btn',type:'button',onclick:()=>zuordnen(c,a.id)},'In Ausgabe '+a.name.replace(/\s*\d{4}$/,'')))));
+  }else if(status(c)==='beobachtung')body.append(h('div',{class:'muted'},'Beobachtung, kein Newsletterthema.'));
+  body.append(h('div',{class:'knoepfe'},status(c)!=='beobachtung'?textToggle(c):null,h('button',{class:'btn',type:'button','aria-expanded':String(isOpen),onclick:flip},isOpen?'Weniger anzeigen':'Details'),
     canWrite===false?null:delIds.has(c.id)?[h('button',{class:'btn danger',type:'button',onclick:()=>loeschen(c)},'Wirklich löschen'),h('button',{class:'btn',type:'button',onclick:()=>{delIds.delete(c.id);render()}},'Abbrechen')]:
       h('button',{class:'btn danger',type:'button',onclick:()=>{delIds.add(c.id);render()}},'Löschen')));
+  el.append(body);
   return el;
 }
 function ausgabePanel(a){

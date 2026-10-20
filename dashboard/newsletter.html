@@ -76,6 +76,15 @@ textarea{min-height:96px;resize:vertical}
 .senden ul{margin:0;padding-left:18px}
 .tb-vorschau{font-size:14px;color:var(--ink)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--navy);color:#fff;padding:10px 16px;font-size:14px;max-width:90vw;border-left:4px solid var(--gold)}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:24px}
+.tabs .person{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.tabs .person select{width:auto;min-width:140px}
+.pill{font-size:12px;font-weight:700;padding:2px 8px;background:#E8EBEF;color:#2B3440}
+.pill.neu{background:var(--navy);color:#fff}.pill.ok{background:#E1F1E9;color:#1E5A40}.pill.warn{background:var(--warn-bg);color:var(--warn-ink)}.pill.bad{background:var(--crit-bg);color:var(--crit-ink)}.pill.neutral{background:#E8EBEF;color:#566070}
+article.k.fuer-mich{border-left:4px solid var(--gold)}
+ul.hist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px}
+ul.hist li{display:flex;flex-wrap:wrap;gap:4px 10px;overflow-wrap:anywhere}ul.hist .t{color:var(--muted);font-size:12px;min-width:16px}
+.wliste{padding:20px 24px;display:flex;flex-direction:column;gap:12px}
 @media (max-width:520px){.sec-head,.liste,.ausgabe .inhalt{padding-left:16px;padding-right:16px}.formular{margin-left:16px;margin-right:16px}.ausgabe .kopf2{padding-left:16px;padding-right:16px}}
 </style>
 <div class="page" id="app"></div>
@@ -270,6 +279,427 @@ function ausgabePanel(a){
           h('button',{class:'btn',type:'button',disabled:i===0,onclick:()=>hoch(c)},'Nach oben'),
           h('button',{class:'btn',type:'button',onclick:()=>freigeben(c)},'Zurück in den Eingangskorb')))})));
 }
+/* ---- Wünsche: Ideen zur Weiterentwicklung des Dashboards (Logik wie im Sekretariat-Dashboard) ----
+   Sammlung `wuensche`: text, von, bereich, status (offen | ausgearbeitet | geprueft | erledigt | geschlossen), story, kriterien, erfolgsmass,
+   pruefung, vorgabe, geprueftVon/-Am, bewaehrt {antwort, kommentar, von, wann}, kommentare, neuFuer, verlauf, angelegt, geaendert, geaendertVon. */
+const PERSONEN=['Andreas','Moritz'];
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+let me=PERSONEN.includes(lsGet('nl.me'))?lsGet('nl.me'):'';
+let view=lsGet('nl.view')==='wuensche'?'wuensche':'eingang';
+let wunsch=[],wLoaded=false,wLoadError='',wFilter=lsGet('nl.wfilter')||'offen',wq='',wForm=false,wSaving=false;
+const wCard=new Set(),wHist=new Set(),wEdit=new Set(),wBusy=new Set(),wCtl={},wPr={},wPrBusy=new Set(),wPrCtl={};
+let aend=[],besuche={},aendForm=false;const aeAlt=new Set();
+const nowIso=()=>new Date().toISOString();
+const fmt=iso=>dat(iso,true);
+const WOPEN=w=>w.status!=='erledigt'&&w.status!=='geschlossen';
+const WERLEDIGT=w=>w.status==='erledigt',WGESCHLOSSEN=w=>w.status==='geschlossen';
+const newForMe=c=>!!me&&!!c.neuFuer&&(c.neuFuer===me||(c.neuFuer==='beide'&&(me==='Andreas'||me==='Moritz')));
+/* Wer prüft und schließt: Autor, Andreas und Moritz. "Neu für dich" nach der Ausarbeitung: die jeweils andere Prüfperson. */
+const wNeuNach=w=>w.von==='Andreas'?'Moritz':w.von==='Moritz'?'Andreas':'beide';
+const BEWAEHRT={ja:'ja',teilweise:'teilweise',nein:'nein'};
+const hatStory=w=>!!(w&&typeof w.story==='string'&&w.story.trim());
+const kriterienOf=w=>Array.isArray(w&&w.kriterien)?w.kriterien.filter(x=>typeof x==='string'&&x.trim()):[];
+const bewaehrtOf=w=>w&&w.bewaehrt&&typeof w.bewaehrt==='object'&&BEWAEHRT[w.bewaehrt.antwort]?w.bewaehrt:null;
+const WBEWAEHRT=w=>WERLEDIGT(w)&&hatStory(w)&&!bewaehrtOf(w);
+const hatVorgabe=w=>!!(w&&typeof w.vorgabe==='string'&&w.vorgabe.trim());
+/* Reihenfolge: offen, ausgearbeitet, geprüft (Einbau geprüft), erledigt. Mit Ausarbeitung geht Erledigt erst nach der Einbauprüfung. */
+const WERLEDIGT_MOEGLICH=w=>!hatStory(w)||hatVorgabe(w);
+const WSTATUS=w=>w.status==='erledigt'?'erledigt':w.status==='geschlossen'?'geschlossen':w.status==='geprueft'?'geprüft':w.status==='ausgearbeitet'?'ausgearbeitet':'offen';
+const wPruefRecht=w=>canWrite!==false&&!!me&&(w.von===me||me==='Andreas'||me==='Moritz');
+const wLabel=o=>o?'Wunsch von '+(o.von||'unbekannt')+': '+String(o.text||'').replace(/\s+/g,' ').slice(0,90):'(Wunsch nicht mehr vorhanden)';
+const ART={dafuer:'spricht dafür',dagegen:'spricht dagegen',zusammen:'zusammen umsetzen'};
+const wBereich=()=>'Newsletter';
+const ABLAEUFE="- Eingangskorb: Quellen (Mail, Datei, Web, Notiz) werden von Hand erfasst oder per Mailabruf angelegt. Status `vorschlag`, `kandidat`, `beobachtung`. Mailabruf täglich 23:45 Uhr (Europe/Berlin), liest nur Mails an `aschumann.bdkep+news@gmail.com` (Gmail nur lesen, nie senden, löschen, verschieben, als gelesen markieren), legt `quellen/m-<Gmail-ID>` an, keine Doppelten.\n"+
+"- Ausgaben und Zuordnung: Quellen werden per Knopf einer Ausgabe zugeordnet (`ausgabe`, `position`) oder zurück in den Eingangskorb gelegt. Die Reihenfolge in der Ausgabe bestimmt die Reihenfolge im Newsletter. Beobachtungen sind keine Newsletterthemen.\n"+
+"- Textbausteine: Je Quelle ein Newsletter-Text (Überschrift, Kurztext, Link-Text). Vorschlag per Claude nur nach Klick auf \"Jetzt senden\" mit Vorschau der gesendeten Daten, der Absender der Mail geht nicht mit. Der Vorschlag wird nie automatisch gespeichert oder freigegeben. Jede Speicherung setzt die Freigabe zurück, frühere Fassungen bleiben (höchstens 20). Stilvorgaben in `style.md`: sachlich, keine Werbesprache, keine rhetorischen Fragen, Angaben nur aus der Quelle, fehlende als `[Angabe fehlt]`.\n"+
+"- Export: Kopieren des Textes der Ausgabe ist da, Vorschau und HTML-Export folgen (Stufe 5), Prüfung in Stufe 6. Der Export enthält nur freigegebene Texte, keine internen Hinweise und Quelldaten.\n"+
+"- Design: Farben, Schrift und Logos kommen aus `design/`, das Dashboard erfindet kein Design.\n"+
+"- Wünsche: Sammlung `wuensche`. Status `offen`, `ausgearbeitet`, `geprueft` (Einbauprüfung gespeichert), `erledigt`, `geschlossen` (nicht umgesetzt; geschlossene Wünsche zählen bei der Einbauprüfung nicht mit). Ausarbeitung (Story, Kriterien, Erfolgsmaß) bestätigt der Autor. Danach ist \"Einbau prüfen\" der feste nächste Schritt; ein ausgearbeiteter Wunsch wird erst nach gespeicherter Einbauprüfung erledigt. Ändert sich die Ausarbeitung, entfällt die Prüfung. Nach Erledigt beantwortet der Autor \"Bewährt?\". Ein Wunsch wird von einer Person erledigt, nie vom Agenten.\n"+
+"- Dashboard: Reiter Eingangskorb und Wünsche. Anmeldung durch Auswahl der Person (Andreas, Moritz). Schreibrechte hängen an der Stufe \"Contributor\". Gemeinsame Datenbank.\n"+
+"- Datenschutz: Mails und Dokumente können vertrauliche oder personenbezogene Inhalte enthalten; keine echten Mails oder Quelltexte im Repo, Tests nur mit Testdaten.";
+const LEITPLANKEN="- Zuerst `README.md`, `newsletter-dashboard-vorgabe.md` und `style.md` lesen, sie sind verbindlich.\n- Auf einem eigenen Branch arbeiten, nicht auf `main`. Keinen Pull Request öffnen und nichts veröffentlichen, bevor die Person es ausdrücklich sagt.\n- Zuerst eine kurze Einbauanalyse schreiben: welche Stellen betroffen sind, was bei bestehenden Daten ohne neue Felder passiert.\n- Nichts erfinden, keine Design-Werte erfinden (`design/` ist maßgeblich). Mails und Quelltexte nicht ins Repo schreiben.\n- Gmail nur lesen. Keine Texte automatisch freigeben, keine Daten ohne Klick an Claude senden.\n- Änderungen klein halten und nur die Dateien anfassen, die der Wunsch braucht.";
+const mutateIn=async(col,id,fn,logText,okMsg)=>{
+  if(!db){toast('Die Datenbank ist nicht erreichbar.');return false}
+  if(!me){toast('Bitte oben zuerst "Ich bin …" wählen.');return false}
+  if(busy)return false;busy=true;
+  try{
+    const ref=db.doc(col+'/'+id),snap=await ref.get();
+    if(!snap.exists){toast(col==='aenderungen'?'Die Änderung existiert nicht mehr.':'Der Wunsch existiert nicht mehr.');return false}
+    const cur=snap.data(),patch=fn(cur)||{};
+    if(newForMe(cur)&&!('neuFuer' in patch))patch.neuFuer='';
+    const verlauf=(cur.verlauf||[]).slice(-199);
+    if(logText)verlauf.push({wer:me,wann:nowIso(),text:logText});
+    await ref.update({...patch,verlauf,geaendert:nowIso(),geaendertVon:me});
+    toast(okMsg?okMsg({...cur,...patch}):'Gespeichert.',okMsg?7000:3500);return true;
+  }catch(e){if(e&&e.nutzer){toast(e.nutzer,8000);return false}toast('Speichern nicht möglich'+(e&&e.code==='invalid_argument'?': keine Schreibrechte.':'.'));return false}
+  finally{busy=false}
+};
+const wm=(w,fn,log,ok)=>mutateIn('wuensche',w.id,fn,log,ok);
+async function sampleJson(prompt,ctl){
+  const r=await sample(prompt,{cache:false,modelTier:'default'});
+  if(ctl&&ctl.aborted)throw {code:'cancelled'};
+  const m=String((r&&r.text)||'').match(/\{[\s\S]*\}/);
+  try{return JSON.parse(m?m[0]:'')}catch(e){throw {code:'invalid_json'}}
+}
+const sampleAus=c=>{if(c==='not_granted'||c==='sampling_disabled'||c==='not_declared'||c==='capability_disabled')sample=null};
+const copyText=async(t,was)=>{try{await navigator.clipboard.writeText(t);toast((was||'Text')+' kopiert.')}catch(e){toast('Kopieren nicht möglich. Bitte im Browser erlauben.')}};
+function vorgabeBauen(w,res,gek){
+  const L=[];
+  L.push('# Auftrag für Claude Code: Wunsch im Newsletter-Dashboard umsetzen','','Repo: bdkep/Newsletter','');
+  L.push('## Wunsch','Von '+(w.von||'unbekannt')+', eingetragen '+fmt(w.angelegt)+'.',String(w.text||'').trim(),'');
+  L.push('## User Story',w.story||'','');
+  L.push('## Akzeptanzkriterien',...kriterienOf(w).map(k=>'- '+k),'');
+  L.push('## Erfolgsmaß',w.erfolgsmass||'','');
+  L.push('## Betroffene Abläufe');
+  if(res.ablaeufe.length)res.ablaeufe.forEach(a=>L.push('- '+a.name+': '+a.beruehrt+(a.konflikt?' ACHTUNG, Konflikt mit einer Regel, vor der Umsetzung klären.':'')));
+  else L.push('- Keine bestehenden Abläufe erkennbar berührt.');
+  L.push('','## Zusammenhang mit anderen Wünschen');
+  if(res.wuensche.length)res.wuensche.forEach(x=>L.push('- '+ART[x.art]+': '+wLabel(wunsch.find(o=>o.id===x.id))+' ('+x.warum+')'));
+  else L.push('- Keine Berührung mit anderen Wünschen erkannt.');
+  if(res.hinweise.length)L.push('','## Hinweise zur Umsetzung',...res.hinweise.map(x=>'- '+x));
+  if(gek&&gek.length)L.push('','## Geklärte Fragen und Aufforderungen',...gek.map(g=>'- '+(g.typ==='aufforderung'?'Aufforderung: ':'Frage: ')+g.text+'\n  Antwort bzw. Bearbeitung: '+g.antwort));
+  L.push('','## Leitplanken',LEITPLANKEN);
+  return L.join('\n');
+}
+async function wunschPruefen(w){
+  if(!sample||wPrBusy.has(w.id))return;
+  const ctl={aborted:false};wPrCtl[w.id]=ctl;wPrBusy.add(w.id);wCard.add(w.id);
+  const gek=(wPr[w.id]?wPr[w.id].geklaert:(w.pruefung&&Array.isArray(w.pruefung.geklaert)?w.pruefung.geklaert:[])).filter(g=>g&&g.text&&g.antwort);
+  render();
+  const andere=wunsch.filter(o=>o.id!==w.id&&!WGESCHLOSSEN(o)).sort((a,b)=>(b.angelegt||'').localeCompare(a.angelegt||'')).slice(0,30)
+    .map(o=>({id:o.id,von:o.von,status:WSTATUS(o),text:String(o.text||'').slice(0,300),story:hatStory(o)?o.story:'',bewaehrt:bewaehrtOf(o)?bewaehrtOf(o).antwort:''}));
+  const prompt='Du prüfst vor der Umsetzung einen ausgearbeiteten Wunsch für das Newsletter-Dashboard des Verbands BdKEP.\n\n'+
+    '## Bestehende Abläufe und Regeln\n'+ABLAEUFE+'\n\n## Der Wunsch\nVon '+w.von+':\n'+String(w.text||'').slice(0,4000)+'\nUser Story: '+w.story+'\nAkzeptanzkriterien:\n'+kriterienOf(w).map(k=>'- '+k).join('\n')+'\nErfolgsmaß: '+(w.erfolgsmass||'')+
+    (gek.length?'\n\n## Bisherige Klärungen (bereits beantwortet, nicht noch einmal fragen)\n'+gek.map(g=>'- '+g.text+' -> '+g.antwort).join('\n'):'')+
+    '\n\n## Andere Wünsche (JSON)\n'+JSON.stringify(andere)+
+    '\n\nAufgaben:\n1. ablaeufe: Welche der oben genannten Abläufe berührt der Wunsch? Nenne nur wirklich berührte, mit dem Namen aus der Liste und einem kurzen Satz, was sich dort ändert. Setze konflikt auf true, wenn der Wunsch eine Grundregel oder Regel verletzen würde (zum Beispiel Texte werden automatisch freigegeben, Gmail wird verändert, Daten gehen ohne Klick an Claude, erfundene Angaben oder Design-Werte).\n'+
+    '2. wuensche: Welche der anderen Wünsche sprechen dafür (gleiches Ziel, ergänzend), dagegen (widersprüchlich, überschneidend) oder sollten zusammen umgesetzt werden? Nenne nur Wünsche mit Bezug, mit der id aus dem JSON und einem kurzen Grund. Erledigte Wünsche mit bewaehrt "nein" sind eine Warnung.\n'+
+    '3. hinweise: 0 bis 5 kurze Hinweise für die Umsetzung (zum Beispiel was bei bestehenden Daten ohne neue Felder zu beachten ist).\n'+
+    '4. fragen: 0 bis 10 Rückfragen an die Person oder Aufforderungen, aber nur wenn die Vorgabe ohne die Antwort nicht sicher geschrieben werden kann. Typ "frage" oder "aufforderung". Schon geklärte Punkte nicht wiederholen. Keine Fragen, wenn alles klar ist.\n'+
+    'Erfinde nichts. Antworte nur mit einem JSON-Objekt: {"ablaeufe":[{"name":"...","beruehrt":"...","konflikt":false}],"wuensche":[{"id":"...","art":"dafuer|dagegen|zusammen","warum":"..."}],"hinweise":["..."],"fragen":[{"typ":"frage|aufforderung","text":"..."}]}';
+  try{
+    const r=await sampleJson(prompt,ctl);
+    const s=x=>typeof x==='string'?x.trim():'';
+    const res={
+      ablaeufe:(Array.isArray(r.ablaeufe)?r.ablaeufe:[]).filter(a=>a&&s(a.name)).map(a=>({name:s(a.name),beruehrt:s(a.beruehrt),konflikt:a.konflikt===true})).slice(0,12),
+      wuensche:(Array.isArray(r.wuensche)?r.wuensche:[]).filter(x=>x&&ART[x.art]&&andere.some(o=>o.id===x.id)).map(x=>({id:x.id,art:x.art,warum:s(x.warum)})).slice(0,12),
+      hinweise:(Array.isArray(r.hinweise)?r.hinweise:[]).map(s).filter(Boolean).slice(0,5),
+      fragen:(Array.isArray(r.fragen)?r.fragen:[]).filter(x=>x&&s(x.text)).map(x=>({typ:x.typ==='aufforderung'?'aufforderung':'frage',text:s(x.text)})).slice(0,10)
+    };
+    Object.keys(drafts).filter(k=>k.startsWith(w.id+'.wf')).forEach(k=>delete drafts[k]);
+    delete drafts[w.id+'.wvorgabe'];
+    wPr[w.id]={res,geklaert:gek,vorgabe:res.fragen.length?null:vorgabeBauen(w,res,gek)};
+    toast(res.fragen.length?'Die Prüfung hat Rückfragen. Bitte beantworten, dann geht es weiter.':'Prüfung ist da. Bitte Vorgabe lesen, bei Bedarf ändern und speichern.',6000);
+  }catch(e){
+    const c=e&&e.code;
+    if(c!=='cancelled')toast(c==='not_granted'?'Claude wurde nicht freigegeben.':c==='rate_limited'?'Gerade zu viele Anfragen an Claude. Bitte später noch einmal versuchen.':c==='invalid_json'?'Die Prüfung war nicht lesbar. Du kannst es noch einmal versuchen.':'Claude hat nicht geantwortet. Du kannst es noch einmal versuchen.',7000);
+    sampleAus(c);
+  }finally{if(wPrCtl[w.id]===ctl){wPrBusy.delete(w.id);delete wPrCtl[w.id]}render()}
+}
+const wpruefung=(w,vorgabe)=>{
+  const d=wPr[w.id];vorgabe=String(vorgabe||'').trim();
+  if(!d||!vorgabe)return toast('Die Vorgabe ist leer.');
+  return wm(w,cur=>({status:cur.status==='ausgearbeitet'?'geprueft':cur.status,pruefung:{...d.res,fragen:[],geklaert:d.geklaert||[]},vorgabe,geprueftVon:me,geprueftAm:nowIso()}),'Einbauprüfung gespeichert, Vorgabe für Claude Code bereit',()=>'Prüfung und Vorgabe gespeichert, der Wunsch steht auf "geprüft". Mit "Vorgabe kopieren" kannst du sie in Claude Code einfügen.')
+    .then(ok=>{if(ok){delete wPr[w.id];delete drafts[w.id+'.wvorgabe'];render()}return ok});
+};
+const hist=items=>h('ul',{class:'hist'},items);
+function wPruefErgebnis(res){
+  const li=[];
+  (res.ablaeufe||[]).forEach(a=>li.push(h('li',{},h('span',{class:'t'},a.konflikt?'⚠':'•'),h('span',{},h('b',{},a.name),': '+a.beruehrt+(a.konflikt?' (Konflikt mit einer Regel)':'')))));
+  (res.wuensche||[]).forEach(x=>li.push(h('li',{},h('span',{class:'t'},x.art==='dagegen'?'⚠':'•'),h('span',{},h('b',{},ART[x.art]),': '+wLabel(wunsch.find(o=>o.id===x.id))+' ('+x.warum+')'))));
+  (res.geklaert||[]).forEach(g=>li.push(h('li',{},h('span',{class:'t'},'✓'),h('span',{},h('b',{},g.typ==='aufforderung'?'Aufforderung':'Frage'),': '+g.text+' → '+g.antwort))));
+  return [li.length?hist(li):h('p',{class:'leer'},'Keine berührten Abläufe und keine Berührung mit anderen Wünschen erkannt.'),
+    (res.hinweise||[]).length?hist(res.hinweise.map(x=>h('li',{},h('span',{class:'t'},'→'),h('span',{},x)))):null];
+}
+function wPruefPanel(w){
+  const busyN=wPrBusy.has(w.id),d=wPr[w.id];
+  if(busyN)return h('div',{class:'tb'},h('h4',{},'Einbau prüfen'),h('p',{class:'leer',role:'status'},'Claude prüft Abläufe und andere Wünsche …'),
+    h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:()=>{const c=wPrCtl[w.id];if(c)c.aborted=true;wPrBusy.delete(w.id);delete wPrCtl[w.id];render()}},'Abbrechen')));
+  if(d&&d.vorgabe===null){
+    const fr=d.res.fragen;
+    const antw=()=>fr.map((f,i)=>({typ:f.typ,text:f.text,antwort:String(drafts[w.id+'.wf'+i]||'').trim()}));
+    const uebernehmen=()=>{const a=antw();d.geklaert=(d.geklaert||[]).concat(a.filter(x=>x.antwort));d.res={...d.res,fragen:a.filter(x=>!x.antwort).map(({typ,text})=>({typ,text}))};Object.keys(drafts).filter(k=>k.startsWith(w.id+'.wf')).forEach(k=>delete drafts[k])};
+    return h('div',{class:'tb'},h('h4',{},'Einbau prüfen: Rückfragen'),
+      h('p',{class:'leer'},'Die Prüfung braucht noch Antworten, bevor die Vorgabe entsteht. Bei jedem Punkt eintragen, was geklärt oder getan wurde, oder "nicht nötig, weil …".'),
+      wPruefErgebnis({...d.res,fragen:[],geklaert:d.geklaert}),
+      fr.map((f,i)=>{const t=h('textarea',{id:'wfrage-'+i+'-'+w.id,'aria-label':(f.typ==='aufforderung'?'Aufforderung: ':'Frage: ')+f.text,oninput:e=>{drafts[w.id+'.wf'+i]=e.target.value}});t.value=drafts[w.id+'.wf'+i]||'';
+        return h('label',{class:'feld'},h('span',{},h('span',{class:'pill '+(f.typ==='aufforderung'?'warn':'neu')},f.typ==='aufforderung'?'Aufforderung':'Frage'),' '+f.text),t)}),
+      h('div',{class:'knoepfe'},
+        h('button',{class:'btn primary',type:'button',onclick:()=>{
+          if(antw().some(x=>!x.antwort))return toast('Bitte jeden Punkt beantworten, auch mit "nicht nötig, weil …".');
+          uebernehmen();d.vorgabe=vorgabeBauen(w,d.res,d.geklaert);render()}},'Vorgabe erstellen'),
+        sample?h('button',{class:'btn',type:'button',onclick:()=>{uebernehmen();wunschPruefen(w)}},'Mit Antworten neu prüfen'):null,
+        h('button',{class:'btn',type:'button',onclick:()=>{delete wPr[w.id];Object.keys(drafts).filter(k=>k.startsWith(w.id+'.wf')).forEach(k=>delete drafts[k]);render()}},'Verwerfen')));
+  }
+  if(d){
+    const ta=h('textarea',{id:'wvorgabe-'+w.id,'aria-label':'Vorgabe für Claude Code',style:'min-height:320px',oninput:e=>{drafts[w.id+'.wvorgabe']=e.target.value}});
+    ta.value=drafts[w.id+'.wvorgabe']!==undefined?drafts[w.id+'.wvorgabe']:d.vorgabe;
+    return h('div',{class:'tb'},h('h4',{},'Einbau prüfen'),h('p',{class:'leer'},'Noch nicht gespeichert. Bitte die Vorgabe lesen und bei Bedarf ändern.'),
+      wPruefErgebnis({...d.res,geklaert:d.geklaert}),h('label',{class:'feld'},'Vorgabe für Claude Code',ta),
+      h('div',{class:'knoepfe'},
+        h('button',{class:'btn primary',type:'button',onclick:()=>wpruefung(w,ta.value)},'Speichern'),
+        h('button',{class:'btn',type:'button',onclick:()=>copyText(ta.value,'Vorgabe')},'Vorgabe kopieren'),
+        h('button',{class:'btn',type:'button',onclick:()=>{delete wPr[w.id];delete drafts[w.id+'.wvorgabe'];render()}},'Verwerfen')));
+  }
+  if(hatVorgabe(w)){
+    const ho=wHist.has('v'+w.id);
+    return h('div',{class:'tb'},h('h4',{},'Einbauprüfung'+(w.geprueftAm?' vom '+fmt(w.geprueftAm)+(w.geprueftVon?' ('+w.geprueftVon+')':''):'')),
+      w.pruefung&&typeof w.pruefung==='object'?wPruefErgebnis(w.pruefung):null,
+      ho?h('pre',{class:'volltext'},w.vorgabe):null,
+      h('div',{class:'knoepfe'},
+        h('button',{class:'btn primary',type:'button',onclick:()=>copyText(w.vorgabe,'Vorgabe')},'Vorgabe kopieren'),
+        h('button',{class:'btn',type:'button','aria-expanded':String(ho),onclick:()=>{ho?wHist.delete('v'+w.id):wHist.add('v'+w.id);render()}},ho?'Vorgabe ausblenden':'Vorgabe anzeigen'),
+        sample&&wPruefRecht(w)&&WOPEN(w)?h('button',{class:'btn',type:'button',onclick:()=>wunschPruefen(w)},'Neu prüfen'):null));
+  }
+  return null;
+}
+async function wunschAnlegen(text){
+  text=(text||'').trim();
+  if(!text)return toast('Bitte den Wunsch beschreiben.');
+  if(!db)return toast('Die Datenbank ist nicht erreichbar.');
+  if(!me)return toast('Bitte oben zuerst "Ich bin …" wählen.');
+  if(wSaving)return;wSaving=true;
+  const id='w-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t=nowIso();
+  try{
+    await db.doc('wuensche/'+id).set({text,von:me,bereich:wBereich(),status:'offen',kommentare:[],verlauf:[{wer:me,wann:t,text:'Wunsch eingetragen'}],angelegt:t,geaendert:t,geaendertVon:me});
+    wForm=false;delete drafts['neu.wunsch'];toast('Wunsch eingetragen. Danke!');
+  }catch(e){toast('Speichern nicht möglich. Dein Text ist noch da, bitte noch einmal versuchen.',6000)}
+  finally{wSaving=false;render()}
+}
+const wact={
+  kommentar:(w,text)=>{text=(text||'').trim();if(!text)return toast('Bitte einen Kommentar eintragen.');delete drafts[w.id+'.wk'];
+    return wm(w,cur=>({kommentare:(cur.kommentare||[]).slice(-199).concat([{wer:me,wann:nowIso(),text}])}),'kommentiert: '+text,()=>'Kommentar eingetragen.')},
+  gesehen:w=>wm(w,()=>({}),null,()=>'Als gesehen markiert.'),
+  erledigt:w=>!WERLEDIGT_MOEGLICH(w)?toast('Erst "Einbau prüfen" abschließen, dann kann der Wunsch erledigt werden.',6000):wm(w,()=>({status:'erledigt',neuFuer:hatStory(w)&&w.von&&w.von!==me?w.von:''}),'auf erledigt gesetzt',()=>hatStory(w)?'Wunsch erledigt. Danach beantwortet '+w.von+' unter "Bewährt?", ob er geholfen hat.':'Wunsch erledigt. Du findest ihn unter "Erledigt".'),
+  schliessen:w=>wm(w,()=>({status:'geschlossen',neuFuer:w.von&&w.von!==me?w.von:''}),'geschlossen, wird nicht umgesetzt',()=>'Wunsch geschlossen. Er zählt bei "Einbau prüfen" nicht mehr mit. Du findest ihn unter "Geschlossen".'),
+  oeffnen:w=>wm(w,cur=>({status:hatVorgabe(cur)?'geprueft':hatStory(cur)?'ausgearbeitet':'offen',bewaehrt:'',neuFuer:''}),'wieder geöffnet',()=>'Wunsch wieder geöffnet.'),
+  ausarbeitung:(w,f)=>{
+    const story=(f.story||'').trim(),erfolgsmass=(f.erfolgsmass||'').trim(),kriterien=(f.kriterien||[]).map(x=>String(x).trim()).filter(Boolean).slice(0,4);
+    if(!story)return toast('Bitte die User Story eintragen.');
+    if(kriterien.length<2)return toast('Bitte mindestens 2 Akzeptanzkriterien eintragen (eins pro Zeile).');
+    if(!erfolgsmass)return toast('Bitte ein Erfolgsmaß eintragen.');
+    return wm(w,cur=>({story,kriterien,erfolgsmass,status:cur.status==='erledigt'?'erledigt':'ausgearbeitet',neuFuer:cur.status==='erledigt'?'':wNeuNach(cur),...(cur.vorgabe?{pruefung:'',vorgabe:'',geprueftAm:'',geprueftVon:''}:{})}),'ausgearbeitet: User Story, '+kriterien.length+' Akzeptanzkriterien und Erfolgsmaß bestätigt',()=>w.vorgabe?'Ausarbeitung gespeichert. Die frühere Einbauprüfung passte nicht mehr und wurde entfernt. Nächster Schritt: Einbau prüfen.':'Ausarbeitung gespeichert. Nächster Schritt: Einbau prüfen.')
+      .then(ok=>{if(ok){wEdit.delete(w.id);['story','krit','mass'].forEach(k=>delete drafts[w.id+'.w'+k]);render()}return ok});
+  },
+  bewaehrt:(w,antwort,kommentar)=>{
+    kommentar=(kommentar||'').trim();delete drafts[w.id+'.wbk'];
+    return wm(w,()=>({bewaehrt:{antwort,kommentar,von:me,wann:nowIso()}}),'Bewährt? '+BEWAEHRT[antwort]+(kommentar?': '+kommentar:''),()=>'Danke, die Rückmeldung ist eingetragen.');
+  }
+};
+const wEntwurf=(w,story,krit,mass)=>{drafts[w.id+'.wstory']=story;drafts[w.id+'.wkrit']=krit;drafts[w.id+'.wmass']=mass};
+/* Vorschlag von Claude: wird nur in den Entwurf geschrieben, gespeichert wird erst nach Bestätigung durch die Person */
+async function wunschAusarbeiten(w){
+  if(!sample||wBusy.has(w.id))return;
+  const ctl={aborted:false};wCtl[w.id]=ctl;wBusy.add(w.id);wEdit.add(w.id);wCard.add(w.id);render();
+  const ko=(w.kommentare||[]).slice(-10).map(k=>'- '+k.wer+': '+k.text).join('\n');
+  const prompt='Du hilfst beim Ausarbeiten eines Wunsches für das Newsletter-Dashboard des Verbands BdKEP. Das Dashboard bedienen Andreas und Moritz. '+
+    'Es sammelt Quellen im Eingangskorb, ordnet sie Ausgaben zu und erzeugt Kurztexte für den Newsletter.\n\nWunsch von '+w.von+':\n---\n'+String(w.text||'').slice(0,4000)+'\n---\n'+(ko?'Kommentare dazu:\n'+ko+'\n':'')+
+    '\nSchreibe auf Deutsch einen Vorschlag mit:\n1. story: eine User Story in der Form "Als <Rolle> möchte ich <Ziel>, damit <Nutzen>". Die Rolle ist Andreas oder Moritz, wie es zum Wunsch passt.\n'+
+    '2. kriterien: 2 bis 4 Akzeptanzkriterien, jedes ein kurzer prüfbarer Satz.\n3. erfolgsmass: ein Satz, woran man nach der Umsetzung erkennt, dass der Wunsch geholfen hat. Nenne eine Zahl aus den Daten des Dashboards (zum Beispiel Anzahl Quellen im Eingangskorb, Zeit bis zum fertigen Text) nur, wenn sie wirklich passt; sonst formuliere eine Frage, die die Person später mit Ja, teilweise oder Nein beantworten kann.\n'+
+    'Erfinde nichts, was nicht im Wunsch steht. Antworte nur mit einem JSON-Objekt: {"story": "...", "kriterien": ["...", "..."], "erfolgsmass": "..."}';
+  try{
+    const r=await sampleJson(prompt,ctl);
+    const story=typeof r.story==='string'?r.story.trim():'';
+    const krit=Array.isArray(r.kriterien)?r.kriterien.filter(x=>typeof x==='string'&&x.trim()).slice(0,4):[];
+    const mass=typeof r.erfolgsmass==='string'?r.erfolgsmass.trim():'';
+    if(!story||krit.length<2||!mass)throw {code:'invalid_json'};
+    wEntwurf(w,story,krit.join('\n'),mass);
+    toast('Vorschlag von Claude ist da. Bitte prüfen, ändern und bestätigen.',6000);
+  }catch(e){
+    const c=e&&e.code;
+    if(c!=='cancelled')toast(c==='not_granted'?'Claude wurde nicht freigegeben. Du kannst die Ausarbeitung auch von Hand eintragen.':c==='rate_limited'?'Gerade zu viele Anfragen an Claude. Bitte später noch einmal versuchen.':c==='invalid_json'?'Der Vorschlag war nicht lesbar. Du kannst es noch einmal versuchen oder von Hand eintragen.':'Claude hat nicht geantwortet. Du kannst es noch einmal versuchen oder von Hand eintragen.',7000);
+    sampleAus(c);
+  }finally{if(wCtl[w.id]===ctl){wBusy.delete(w.id);delete wCtl[w.id]}render()}
+}
+function wstats(){return {fuermich:wunsch.filter(newForMe).length,offen:wunsch.filter(WOPEN).length,erledigt:wunsch.filter(WERLEDIGT).length,geschlossen:wunsch.filter(WGESCHLOSSEN).length,bewaehrt:wunsch.filter(WBEWAEHRT).length,alle:wunsch.length}}
+function visibleW(){
+  const f={offen:WOPEN,erledigt:WERLEDIGT,geschlossen:WGESCHLOSSEN,bewaehrt:WBEWAEHRT,fuermich:newForMe,alle:()=>true}[wFilter]||WOPEN;
+  const needle=wq.trim().toLowerCase();
+  return wunsch.filter(f).filter(w=>!needle||[w.text,w.von,hatStory(w)?w.story:'',...(w.kommentare||[]).map(k=>k.text)].join(' ').toLowerCase().includes(needle))
+    .sort((a,b)=>(b.angelegt||'').localeCompare(a.angelegt||''));
+}
+function wEditor(w){
+  const busyN=wBusy.has(w.id);
+  const mk=(key,label,rows,ph)=>{const t=h('textarea',{id:'w'+key+'-'+w.id,'aria-label':label,placeholder:ph||'',disabled:busyN,style:'min-height:'+(rows*24+16)+'px',oninput:e=>{drafts[w.id+'.w'+key]=e.target.value}});t.value=drafts[w.id+'.w'+key]||'';return h('label',{class:'feld'},label,t)};
+  const zu=()=>{wEdit.delete(w.id);['story','krit','mass'].forEach(k=>delete drafts[w.id+'.w'+k]);render()};
+  return h('div',{class:'tb'},h('h4',{},'Ausarbeitung'),
+    busyN?h('p',{class:'leer',role:'status'},'Claude arbeitet den Vorschlag aus …'):h('p',{class:'leer'},'Dieser Entwurf ist noch nicht gespeichert. Bitte prüfen, bei Bedarf ändern und dann bestätigen.'),
+    mk('story','User Story',3,'Als <Rolle> möchte ich <Ziel>, damit <Nutzen>'),
+    mk('krit','Akzeptanzkriterien (2 bis 4, eins pro Zeile)',4),
+    mk('mass','Erfolgsmaß',2),
+    h('div',{class:'knoepfe'},
+      busyN?h('button',{class:'btn',type:'button',onclick:()=>{const c=wCtl[w.id];if(c)c.aborted=true;wBusy.delete(w.id);delete wCtl[w.id];render()}},'Abbrechen'):[
+        h('button',{class:'btn primary',type:'button',onclick:()=>wact.ausarbeitung(w,{story:drafts[w.id+'.wstory'],kriterien:String(drafts[w.id+'.wkrit']||'').split('\n'),erfolgsmass:drafts[w.id+'.wmass']})},'Bestätigen und speichern'),
+        h('button',{class:'btn',type:'button',onclick:zu},'Verwerfen')]));
+}
+function wcard(w){
+  const open=WOPEN(w),cardOpen=wCard.has(w.id),canAct=canWrite!==false&&!!me,ko=w.kommentare||[],neu=newForMe(w),eigen=canAct&&w.von===me;
+  const flip=()=>{cardOpen?wCard.delete(w.id):wCard.add(w.id);render();if(neu&&canAct)wact.gesehen(w)};
+  const btn=(label,fn,cls)=>h('button',{class:'btn'+(cls?' '+cls:''),type:'button',onclick:fn},label);
+  const el=h('article',{class:'k'+(neu?' fuer-mich':''),id:'w-'+w.id});
+  el.append(h('div',{class:'zeile'},
+    neu?h('span',{class:'pill neu'},'Neu für dich'):null,
+    h('span',{class:'pill'+(open?'':WGESCHLOSSEN(w)?' neutral':' ok')},WSTATUS(w)),
+    bewaehrtOf(w)?h('span',{class:'pill '+(w.bewaehrt.antwort==='nein'?'bad':w.bewaehrt.antwort==='ja'?'ok':'warn')},'bewährt: '+BEWAEHRT[w.bewaehrt.antwort]):WBEWAEHRT(w)?h('span',{class:'pill neu'},'Bewährt? offen'):null,
+    ko.length?h('span',{class:'pill'},ko.length+(ko.length===1?' Kommentar':' Kommentare')):null,
+    h('span',{class:'muted',style:'margin-left:auto'},'Wunsch von '+(w.von||'unbekannt')+' · '+dat(w.angelegt))));
+  el.append(cardOpen?h('pre',{class:'volltext'},w.text):h('p',{},kurz(w.text,240)));
+  if(!cardOpen){el.append(h('div',{class:'knoepfe'},h('button',{class:'btn','aria-expanded':'false',onclick:flip},'Details')));return el}
+  if(ko.length)el.append(h('div',{class:'tb'},h('h4',{},'Kommentare ('+ko.length+')'),hist(ko.map(k=>h('li',{},h('span',{class:'t'},fmt(k.wann)),h('span',{style:'white-space:pre-wrap;overflow-wrap:anywhere'},k.wer+': '+k.text))))));
+  if(hatStory(w)&&!wEdit.has(w.id)){
+    const kr=kriterienOf(w);
+    el.append(h('div',{class:'tb'},h('h4',{},'Ausarbeitung'),h('p',{style:'white-space:pre-wrap'},w.story),
+      kr.length?hist(kr.map(k=>h('li',{},h('span',{class:'t'},'✓'),h('span',{},k)))):null,
+      w.erfolgsmass?h('p',{class:'meta'},'Erfolgsmaß: '+w.erfolgsmass):null));
+  }
+  if(wEdit.has(w.id)&&eigen)el.append(wEditor(w));
+  else if(hatStory(w)&&(wPr[w.id]||wPrBusy.has(w.id)||hatVorgabe(w))){const pp=wPruefPanel(w);if(pp)el.append(pp)}
+  const bw=bewaehrtOf(w);
+  if(bw)el.append(h('div',{class:'warn '+(bw.antwort==='ja'?'':'warn-k')},h('b',{},'Bewährt? '+BEWAEHRT[bw.antwort]),' ('+bw.von+', '+fmt(bw.wann)+')'+(bw.kommentar?': '+bw.kommentar:'')));
+  else if(WBEWAEHRT(w)){
+    if(eigen){
+      const ta=h('textarea',{id:'wbk-'+w.id,'aria-label':'Kommentar zur Rückmeldung',placeholder:'Kommentar (optional)',oninput:e=>{drafts[w.id+'.wbk']=e.target.value}});
+      ta.value=drafts[w.id+'.wbk']||'';
+      el.append(h('div',{class:'tb'},h('h4',{},'Bewährt? Hat der Wunsch geholfen?'),w.erfolgsmass?h('p',{class:'meta'},'Erfolgsmaß: '+w.erfolgsmass):null,ta,
+        h('div',{class:'knoepfe',role:'group','aria-label':'Antwort'},[['ja','Ja'],['teilweise','Teilweise'],['nein','Nein']].map(([k,l])=>
+          h('button',{class:'btn',type:'button',id:'wbw-'+k+'-'+w.id,onmousedown:e=>e.preventDefault(),onclick:()=>{ta.blur();wact.bewaehrt(w,k,drafts[w.id+'.wbk'])}},l)))));
+    }else el.append(h('p',{class:'meta'},'Bewährt? Die Antwort gibt '+(w.von||'die Person, die den Wunsch eingetragen hat')+'.'));
+  }
+  if(canAct){
+    const bearb=()=>{wEntwurf(w,w.story||'',kriterienOf(w).join('\n'),w.erfolgsmass||'');wEdit.add(w.id);wCard.add(w.id);render()};
+    const pruefKnopf=open&&hatStory(w)&&sample&&wPruefRecht(w)&&!wEdit.has(w.id)&&!wPr[w.id]&&!wPrBusy.has(w.id)&&!hatVorgabe(w);
+    el.append(h('div',{class:'knoepfe'},
+      open?(WERLEDIGT_MOEGLICH(w)?btn('Erledigt',()=>wact.erledigt(w),'primary'):(pruefKnopf?btn('Einbau prüfen (nächster Schritt)',()=>wunschPruefen(w),'primary'):h('span',{class:'meta'},'Erledigt ist erst nach der Einbauprüfung möglich.'))):btn('Wieder öffnen',()=>wact.oeffnen(w)),
+      open&&wPruefRecht(w)?btn('Schließen',()=>wact.schliessen(w)):null,
+      eigen&&open&&!wEdit.has(w.id)&&sample?btn(hatStory(w)?'Neu ausarbeiten':'Ausarbeiten',()=>wunschAusarbeiten(w)):null,
+      eigen&&open&&!wEdit.has(w.id)?btn(hatStory(w)?'Ausarbeitung ändern':'Von Hand ausarbeiten',bearb):null));
+    const ta=h('textarea',{id:'wk-'+w.id,'aria-label':'Kommentar eintragen',placeholder:'Kommentar eintragen',style:'min-height:64px',oninput:e=>{drafts[w.id+'.wk']=e.target.value}});
+    ta.value=drafts[w.id+'.wk']||'';
+    el.append(h('div',{class:'feld'},ta,h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onmousedown:e=>e.preventDefault(),onclick:()=>{ta.blur();wact.kommentar(w,drafts[w.id+'.wk'])}},'Kommentieren'))));
+  }
+  const vl=w.verlauf||[];
+  if(vl.length)el.append(h('details',{class:'tb',open:wHist.has(w.id)?true:null,ontoggle:e=>{e.target.open?wHist.add(w.id):wHist.delete(w.id)}},h('summary',{},'Historie ('+vl.length+')'),
+    hist(vl.slice().reverse().map(v=>h('li',{},h('span',{class:'t'},fmt(v.wann)),h('span',{},v.wer+': '+v.text))))));
+  el.append(h('div',{class:'knoepfe'},h('button',{class:'btn','aria-expanded':'true',onclick:flip},'Zuklappen')));
+  return el;
+}
+/* ---- Änderungen am Dashboard: Übersicht im Reiter Wünsche ----
+   Sammlung `aenderungen`: text, datum (JJJJ-MM-TT), bereich (Eingangskorb | Ausgaben | Texte | Wünsche | Allgemein), status (entwurf | freigegeben | verworfen),
+   nachsaetze, freigegebenVon/-Am, verlauf, quelle (hand | agent). Sammlung `besuche`: ein Dokument je Person, gesehenBis (ISO).
+   Neu für mich = freigegeben nach meinem gesehenBis; ohne Dokument gilt alles Freigegebene als neu. */
+const aeMut=(a,fn,log,ok)=>mutateIn('aenderungen',a.id,fn,log,ok);
+const heuteBerlin=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Berlin'}).format(new Date());
+const AEBEREICHE=['Eingangskorb','Ausgaben','Texte','Wünsche','Allgemein'];
+const aeFrei=()=>aend.filter(a=>a.status==='freigegeben');
+const aeEntw=()=>aend.filter(a=>a.status==='entwurf');
+const aeNeu=a=>!!me&&a.status==='freigegeben'&&(a.freigegebenAm||a.angelegt||'')>((besuche[me]||{}).gesehenBis||'');
+const aeSort=(x,y)=>(y.datum||'').localeCompare(x.datum||'')||(y.angelegt||'').localeCompare(x.angelegt||'');
+async function aenderungAnlegen(text,bereich){
+  text=(text||'').trim();
+  if(!text)return toast('Bitte den Text der Änderung eintragen.');
+  if(!db)return toast('Die Datenbank ist nicht erreichbar.');
+  if(!me)return toast('Bitte oben zuerst "Ich bin …" wählen.');
+  const id='a-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t=nowIso();
+  try{
+    await db.doc('aenderungen/'+id).set({text,datum:heuteBerlin(),bereich:bereich||'Allgemein',status:'entwurf',nachsaetze:[],quelle:'hand',
+      verlauf:[{wer:me,wann:t,text:'als Entwurf eingetragen'}],angelegt:t,geaendert:t,geaendertVon:me});
+    aendForm=false;delete drafts['neu.aend'];toast('Entwurf eingetragen. Er erscheint erst nach "Freigeben" in der Übersicht.');render();
+  }catch(e){toast('Speichern nicht möglich.')}
+}
+const aeAkt={
+  text:(a,text)=>{text=(text||'').trim();if(!text)return toast('Der Text darf nicht leer sein.');delete drafts[a.id+'.at'];
+    return aeMut(a,()=>({text}),'Text angepasst',()=>'Text gespeichert.')},
+  freigeben:(a,text)=>{text=(text||a.text||'').trim();if(!text)return toast('Der Text darf nicht leer sein.');delete drafts[a.id+'.at'];
+    return aeMut(a,()=>({text,status:'freigegeben',freigegebenVon:me,freigegebenAm:nowIso()}),'freigegeben',()=>'Freigegeben. Die Änderung steht jetzt in der Übersicht.')},
+  verwerfen:a=>aeMut(a,()=>({status:'verworfen'}),'verworfen',()=>'Entwurf verworfen.'),
+  nachsatz:(a,text)=>{text=(text||'').trim();if(!text)return toast('Bitte einen Nachsatz eintragen.');delete drafts[a.id+'.ns'];
+    return aeMut(a,cur=>({nachsaetze:(cur.nachsaetze||[]).slice(-199).concat([{wer:me,wann:nowIso(),text}])}),'Nachsatz: '+text,()=>'Nachsatz eingetragen.')}
+};
+async function aeGesehen(){
+  if(!db)return toast('Die Datenbank ist nicht erreichbar.');
+  if(!me)return toast('Bitte oben zuerst "Ich bin …" wählen.');
+  const t=nowIso();
+  try{await db.doc('besuche/'+me).set({person:me,gesehenBis:t,geaendert:t});toast('Als gesehen markiert. Die Einträge stehen jetzt unter "Frühere Änderungen".')}
+  catch(e){toast('Speichern nicht möglich.')}
+}
+function aeKarte(a,mitNachsatz){
+  const canAct=canWrite!==false&&!!me,ns=a.nachsaetze||[];
+  const k=[h('div',{class:'zeile'},
+    a.datum?h('span',{class:'pill'},fmtD.format(new Date(a.datum+'T12:00:00'))):null,
+    a.bereich?h('span',{class:'pill'},a.bereich):null,
+    aeNeu(a)?h('span',{class:'pill neu'},'Neu'):null)];
+  k.push(h('p',{},a.text));
+  if(ns.length)k.push(hist(ns.map(n=>h('li',{},h('span',{class:'t'},fmt(n.wann)),h('span',{style:'white-space:pre-wrap;overflow-wrap:anywhere'},'Nachsatz von '+n.wer+': '+n.text)))));
+  if(canAct&&mitNachsatz){
+    const ta=h('textarea',{id:'ns-'+a.id,'aria-label':'Nachsatz eintragen',placeholder:'Nachsatz eintragen',style:'min-height:64px',oninput:e=>{drafts[a.id+'.ns']=e.target.value}});
+    ta.value=drafts[a.id+'.ns']||'';
+    k.push(h('div',{class:'feld'},ta,h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onmousedown:e=>e.preventDefault(),onclick:()=>{ta.blur();aeAkt.nachsatz(a,drafts[a.id+'.ns'])}},'Nachsatz speichern'))));
+  }
+  return h('article',{class:'k',id:'ae-'+a.id},k);
+}
+function aeEntwurf(a){
+  const ta=h('textarea',{id:'at-'+a.id,'aria-label':'Text der Änderung',oninput:e=>{drafts[a.id+'.at']=e.target.value}});
+  ta.value=drafts[a.id+'.at']!=null?drafts[a.id+'.at']:a.text;
+  const canAct=canWrite!==false&&!!me,cur=()=>drafts[a.id+'.at']!=null?drafts[a.id+'.at']:a.text;
+  return h('article',{class:'k',id:'ae-'+a.id},
+    h('div',{class:'zeile'},h('span',{class:'pill warn'},'Entwurf, noch nicht freigegeben'),a.bereich?h('span',{class:'pill'},a.bereich):null),
+    canAct?ta:h('p',{},a.text),
+    canAct?h('div',{class:'knoepfe'},
+      h('button',{class:'btn primary',type:'button',onmousedown:e=>e.preventDefault(),onclick:()=>{ta.blur();aeAkt.freigeben(a,cur())}},'Freigeben'),
+      h('button',{class:'btn',type:'button',onmousedown:e=>e.preventDefault(),onclick:()=>{ta.blur();aeAkt.text(a,cur())}},'Text speichern'),
+      h('button',{class:'btn',type:'button',onclick:()=>aeAkt.verwerfen(a)},'Verwerfen')):null);
+}
+function aenderungenView(){
+  const frei=aeFrei().sort(aeSort),neu=frei.filter(aeNeu),alt=frei.filter(a=>!aeNeu(a)),entw=aeEntw().sort(aeSort),canAct=canWrite!==false&&!!me;
+  const box=h('section',{class:'links',id:'aenderungen','aria-label':'Änderungen am Dashboard'});
+  const kopf=h('div',{class:'sec-head'},h('div',{class:'sec-top'},h('h2',{},'Änderungen am Dashboard'),h('span',{class:'muted'},neu.length+' neu')),
+    h('p',{class:'muted',style:'margin:8px 0 0'},'Was sich an Oberfläche und Grafik geändert hat, in kurzen Sätzen. Zu jedem Eintrag kannst du einen Nachsatz schreiben.'),
+    canAct?h('div',{class:'chips'},h('button',{class:'btn',type:'button',onclick:()=>{aendForm=!aendForm;render()}},'Änderung eintragen')):null);
+  box.append(kopf);
+  const inh=h('div',{class:'wliste'});
+  if(aendForm&&canAct){
+    const ta=h('textarea',{id:'ae-neu-text','aria-label':'Text der Änderung',placeholder:'Was sehen oder bedienen die Nutzer jetzt anders? Ein bis zwei kurze Sätze.',oninput:e=>{drafts['neu.aend']=e.target.value}});
+    ta.value=drafts['neu.aend']||'';
+    const sel=h('select',{id:'ae-neu-bereich','aria-label':'Bereich',onchange:e=>{drafts['neu.aendb']=e.target.value}},AEBEREICHE.map(b=>h('option',{value:b},b)));
+    sel.value=drafts['neu.aendb']||'Allgemein';
+    inh.append(h('div',{class:'formular',style:'margin:0'},h('label',{class:'feld'},'Bereich',sel),h('label',{class:'feld'},'Text',ta),
+      h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onmousedown:e=>e.preventDefault(),onclick:()=>{ta.blur();aenderungAnlegen(drafts['neu.aend'],sel.value)}},'Als Entwurf eintragen'),h('button',{class:'btn',type:'button',onclick:()=>{aendForm=false;render()}},'Abbrechen'))));
+  }
+  if(entw.length){inh.append(h('h4',{style:'margin:0;color:var(--navy)'},'Zur Freigabe ('+entw.length+')'));entw.forEach(a=>inh.append(aeEntwurf(a)))}
+  if(!frei.length&&!entw.length)inh.append(h('p',{class:'leer'},'Noch keine Änderungen eingetragen.'));
+  if(neu.length){
+    inh.append(h('h4',{style:'margin:0;color:var(--navy)'},'Neu seit deinem letzten Besuch ('+neu.length+')'));
+    neu.forEach(a=>inh.append(aeKarte(a,true)));
+    if(canAct)inh.append(h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',id:'ae-gesehen',onclick:aeGesehen},'Als gesehen markieren')));
+  }else if(frei.length)inh.append(h('p',{class:'leer'},'Seit deinem letzten Besuch ist nichts Neues dazugekommen.'));
+  if(alt.length)inh.append(h('details',{class:'tb',open:aeAlt.has('alt')?true:null,ontoggle:e=>{e.target.open?aeAlt.add('alt'):aeAlt.delete('alt')}},h('summary',{},'Frühere Änderungen ('+alt.length+')'),
+    h('div',{style:'display:flex;flex-direction:column;gap:12px;margin-top:8px'},alt.map(a=>aeKarte(a,true)))));
+  box.append(inh);
+  return box;
+}
+function wuenscheView(){
+  const c=wstats();
+  const FL=[['fuermich','Neu für mich'],['offen','Offen'],['erledigt','Erledigt'],['bewaehrt','Bewährt?'],['geschlossen','Geschlossen'],['alle','Alle']];
+  if(!FL.some(([k])=>k===wFilter))wFilter='offen';
+  const list=visibleW(),canAct=canWrite!==false;
+  const ta=h('textarea',{id:'wunsch-neu','aria-label':'Wunsch beschreiben',placeholder:'Was fehlt im Dashboard oder sollte anders sein?',oninput:e=>{drafts['neu.wunsch']=e.target.value}});ta.value=drafts['neu.wunsch']||'';
+  return h('main',{class:'gutter'},aenderungenView(),h('section',{class:'links'},
+    h('div',{class:'sec-head'},
+      h('div',{class:'sec-top'},h('h2',{},'Wünsche'),h('span',{class:'muted'},list.length+(list.length===1?' Wunsch':' Wünsche')+' in dieser Ansicht')),
+      h('p',{class:'muted',style:'margin:8px 0 0'},'Ideen zur Weiterentwicklung des Newsletter-Dashboards. Ablauf: eintragen, ausarbeiten, Einbau prüfen, erledigen, später "Bewährt?" beantworten.'),
+      h('div',{class:'chips',role:'group','aria-label':'Filter Wünsche'},FL.map(([k,t])=>h('button',{class:'btn'+(wFilter===k?' on':''),type:'button','aria-pressed':String(wFilter===k),onclick:()=>{wFilter=k;lsSet('nl.wfilter',k);render()}},t+' ('+c[k]+')')),
+        canAct?h('button',{class:'btn primary',type:'button',style:'margin-left:auto',onclick:()=>{wForm=!wForm;render()}},'Wunsch eintragen'):null),
+      h('div',{class:'chips'},h('input',{id:'wsuche',type:'search',placeholder:'Wünsche durchsuchen','aria-label':'Wünsche durchsuchen',value:wq,oninput:e=>{wq=e.target.value;render()}}))),
+    wForm&&canAct?h('div',{class:'formular'},h('h2',{},'Wunsch eintragen'),h('label',{class:'feld'},'Beschreibung',ta),
+      h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',disabled:wSaving,onclick:()=>wunschAnlegen(drafts['neu.wunsch'])},'Eintragen'),h('button',{class:'btn',type:'button',onclick:()=>{wForm=false;render()}},'Abbrechen'))):null,
+    wLoadError?h('div',{class:'warn crit',role:'alert',style:'margin:20px 24px 0'},wLoadError):null,
+    h('div',{class:'wliste'},
+      !wLoaded&&!wLoadError?h('p',{class:'leer'},'Lade Wünsche …'):null,
+      wLoaded&&!wunsch.length?h('p',{class:'leer'},'Noch keine Wünsche. Trage mit "Wunsch eintragen" ein, was im Dashboard fehlt oder anders sein sollte.'):null,
+      wLoaded&&wunsch.length&&!list.length?h('p',{class:'leer'},wq.trim()?'Zu "'+wq.trim()+'" gibt es keinen Treffer in diesem Filter.':'Nichts in dieser Ansicht. Wähle oben einen anderen Filter.'):null,
+      list.map(wcard))));
+}
 function render(){
   const a=document.activeElement,id=a&&a.id,pos=a&&a.selectionStart,sc=document.querySelector('.liste'),st=sc?sc.scrollTop:0;
   const app=document.getElementById('app');app.textContent='';
@@ -278,11 +708,15 @@ function render(){
   const count=fn=>unz.filter(fn).length;
   const chips=[['alle','Alle ('+unz.length+')'],['mail','Mail ('+count(c=>c.typ==='mail')+')'],['document','Datei ('+count(c=>c.typ==='document')+')'],['link','Web ('+count(c=>c.typ==='link')+')'],['note','Notiz ('+count(c=>c.typ==='note')+')'],['beobachtung','Beobachtung ('+count(c=>status(c)==='beobachtung')+')']];
   const shown=unz.filter(c=>filter==='alle'||(filter==='beobachtung'?status(c)==='beobachtung':c.typ===filter)).sort((x,y)=>RANK[status(x)]-RANK[status(y)]||(y.erfasstAm||'').localeCompare(x.erfasstAm||''));
+  const ws=wstats(),kpW=[[aeFrei().filter(aeNeu).length,'Neue Änderungen'],[ws.fuermich,'Neu für mich'],[ws.offen,'Offene Wünsche'],[ws.erledigt,'Erledigt'],[ws.bewaehrt,'Bewährt? offen']];
   const kp=[[echte.filter(c=>!ausgabeId(c)).length,'Im Eingangskorb'],[echte.filter(c=>ausgabeId(c)).length,'Einer Ausgabe zugeordnet'],[echte.filter(c=>c.hinweisText).length,'Themen mit Hinweis'],[items.filter(c=>status(c)==='beobachtung').length,'In Beobachtung']];
   app.append(
     h('header',{class:'kopf gutter'},h('div',{},h('div',{class:'over'},'Newsletter-Redaktion'),h('h1',{},'Themen sammeln, Ausgaben planen'),h('p',{class:'sub'},'Stand '+dat(new Date().toISOString())+' · Daten aus dem Themenspeicher')),h('img',{src:LOGO_D,alt:'BdKEP'})),
-    h('section',{class:'kpis gutter'},kp.map(([v,l])=>h('div',{class:'kpi'},h('div',{class:'v'},String(v)),h('div',{class:'l'},l)))),
-    h('main',{class:'gutter'},
+    h('div',{class:'tabs gutter',role:'group','aria-label':'Bereich'},
+      [['eingang','Eingangskorb'],['wuensche','Wünsche'+(ws.fuermich?' ('+ws.fuermich+' neu für dich)':ws.offen?' ('+ws.offen+' offen)':'')]].map(([k,t])=>h('button',{class:'btn'+(view===k?' on':''),type:'button','aria-pressed':String(view===k),onclick:()=>{view=k;lsSet('nl.view',k);render()}},t)),
+      h('label',{class:'person'},'Ich bin',h('select',{id:'ich-bin','aria-label':'Ich bin',onchange:e=>{me=e.target.value;lsSet('nl.me',me);render()}},h('option',{value:''},'bitte wählen'),PERSONEN.map(n=>h('option',{value:n,selected:n===me},n))))),
+    h('section',{class:'kpis gutter'},(view==='wuensche'?kpW:kp).map(([v,l])=>h('div',{class:'kpi'},h('div',{class:'v'},String(v)),h('div',{class:'l'},l)))),
+    view==='wuensche'?wuenscheView():h('main',{class:'gutter'},
       h('section',{class:'links'},
         h('div',{class:'sec-head'},
           h('div',{class:'sec-top'},h('h2',{},'Eingangskorb'),h('span',{class:'muted'},shown.length+(shown.length===1?' Eintrag':' Einträge')+' in dieser Ansicht')),
@@ -313,6 +747,9 @@ render();
     db=await claude.use('db');
     if(!db){loaded=true;render();toast('Anmeldung nötig, um den Eingangskorb zu laden.');return}
     db.collection('quellen').onSnapshot(s=>{items=s.docs.map(d=>({id:d.id,...d.data()}));loaded=true;render()},()=>{loaded=true;toast('Eingangskorb nicht ladbar.')});
+    db.collection('wuensche').onSnapshot(s=>{wunsch=s.docs.map(d=>({id:d.id,...d.data()}));wLoaded=true;wLoadError='';render()},e=>{wLoaded=true;wLoadError='Die Wünsche können nicht geladen werden ('+(e&&e.code||'Fehler')+').';render()});
+    db.collection('aenderungen').onSnapshot(s=>{aend=s.docs.map(d=>({id:d.id,...d.data()}));render()},()=>{});
+    db.collection('besuche').onSnapshot(s=>{besuche={};s.docs.forEach(d=>{besuche[d.id]=d.data()});render()},()=>{});
     db.collection('ausgaben').onSnapshot(s=>{ausgaben=s.docs.map(d=>({id:d.id,...d.data()})).sort((x,y)=>(x.reihenfolge||0)-(y.reihenfolge||0));render()},()=>{});
   }catch(e){loaded=true;render()}
 })();

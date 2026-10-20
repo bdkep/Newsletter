@@ -198,10 +198,13 @@ async function neueQuelle(f){
   if(ok){showNew=false;['t','u','b','a','d','x'].forEach(k=>delete drafts['neu.'+k]);render()}
 }
 async function neueAusgabe(){
-  const name=(drafts['ausg.name']||'').trim();if(!name)return toast('Bitte einen Namen eintragen, z. B. „Januar 2027“.');
+  const name=(drafts['ausg.name']||'').trim(),datum=drafts['ausg.datum']||'',zeit=drafts['ausg.zeit']||'';
+  if(!name)return toast('Bitte einen Namen eintragen, z. B. „Januar 2027“.');
+  if(!datum)return toast('Bitte einen Versandtermin wählen. Jede Ausgabe braucht einen Termin.');
+  if(datum<heuteBerlin())return toast('Das Versanddatum liegt in der Vergangenheit.');
   const id='a-'+Date.now().toString(36);
-  const ok=await schreiben(()=>db.doc('ausgaben/'+id).set({name,reihenfolge:Date.now(),angelegtAm:new Date().toISOString()}),'Ausgabe angelegt.');
-  if(ok){newIssue=false;delete drafts['ausg.name'];render()}
+  const ok=await schreiben(()=>db.doc('ausgaben/'+id).set({name,versanddatum:datum,versandzeit:zeit,notiz:(drafts['ausg.notiz']||'').trim(),status:'planung',reihenfolge:Date.now(),angelegtAm:new Date().toISOString()}),'Ausgabe mit Versandtermin angelegt.');
+  if(ok){newIssue=false;['name','datum','zeit','notiz'].forEach(k=>delete drafts['ausg.'+k]);render()}
 }
 const loeschen=c=>schreiben(async()=>{await db.doc('quellen/'+c.id).delete();delIds.delete(c.id);openIds.delete(c.id)},'Quelle gelöscht.');
 function parseEml(raw){
@@ -712,7 +715,8 @@ const aOpen=new Set(),termEdit=new Set();
 const aktiv=()=>ausgaben.filter(a=>a.status!=='versendet');
 const wochentag=new Intl.DateTimeFormat('de-DE',{weekday:'long',timeZone:'Europe/Berlin'});
 const datTag=s=>{if(!s)return '';const d=new Date(s+'T12:00:00');return isNaN(d)?s:wochentag.format(d)+', '+fmtD.format(d)};
-const ausSort=(x,y)=>(x.versanddatum&&y.versanddatum?x.versanddatum.localeCompare(y.versanddatum):x.versanddatum?-1:y.versanddatum?1:0)||(x.reihenfolge||0)-(y.reihenfolge||0);
+/* Ausgaben nach Versanddatum absteigend (spätester Termin zuerst), ohne Termin am Ende */
+const ausSort=(x,y)=>(x.versanddatum&&y.versanddatum?y.versanddatum.localeCompare(x.versanddatum)||(y.versandzeit||'').localeCompare(x.versandzeit||''):x.versanddatum?-1:y.versanddatum?1:0)||(x.reihenfolge||0)-(y.reihenfolge||0);
 const abschnitteOf=n=>Array.isArray(n&&n.abschnitte)?n.abschnitte.filter(a=>a&&(a.ueberschrift||a.text)):[];
 const archivText=n=>(n.name||'Newsletter')+(n.versanddatum?' ('+fmtD.format(new Date(n.versanddatum+'T12:00:00'))+')':'')+'\n\n'+(n.einleitung?n.einleitung+'\n\n':'')+abschnitteOf(n).map((a,i)=>(i+1)+'. '+a.ueberschrift+'\n'+a.text).join('\n\n');
 const archivVolltext=n=>[n.name,n.titel,n.einleitung,n.notiz,...abschnitteOf(n).flatMap(a=>[a.ueberschrift,a.text])].filter(Boolean).join('\n');
@@ -909,7 +913,7 @@ function termineView(){
         zuletzt.map(n=>h('div',{class:'pos'},h('div',{class:'zeile'},n.versanddatum?h('span',{class:'pill'},fmtD.format(new Date(n.versanddatum+'T12:00:00'))):null),h('div',{class:'t'},n.name),h('div',{class:'meta'},abschnitteOf(n).length+' Abschnitte'))),
         h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:()=>{view='archiv';lsSet('nl.view',view);render()}},'Zum Archiv'))))));
 }
-const kpT=()=>{const h0=heuteBerlin(),n=aktiv().filter(a=>a.versanddatum&&a.versanddatum>=h0).sort(ausSort)[0];
+const kpT=()=>{const h0=heuteBerlin(),n=aktiv().filter(a=>a.versanddatum&&a.versanddatum>=h0).sort((x,y)=>x.versanddatum.localeCompare(y.versanddatum))[0];
   return[[aktiv().length,'Ausgaben in Planung'],[n?fmtD.format(new Date(n.versanddatum+'T12:00:00')):'–','Nächster Versand'],[aktiv().filter(a=>!a.versanddatum).length,'Ohne Termin'],[aktiv().filter(a=>a.versanddatum&&a.versanddatum<h0).length,'Termin überschritten']]};
 const kpA=()=>[[archiv.length,'Newsletter im Archiv'],[archiv.reduce((s,n)=>s+abschnitteOf(n).length,0),'Abschnitte'],[archiv.filter(n=>n.stilvorbild).length,'Stilvorbilder']];
 function render(){
@@ -943,7 +947,7 @@ function render(){
       h('section',{class:'rechts'},
         aktiv().map(ausgabePanel),
         !aktiv().length&&loaded?h('p',{class:'leer'},'Noch keine Ausgabe angelegt.'):null,
-        canWrite===false?null:newIssue?h('div',{class:'formular',style:'margin:0'},h('label',{class:'feld'},'Name der Ausgabe',h('input',{id:'ausg-name',value:drafts['ausg.name']||'',placeholder:'z. B. Januar 2027',oninput:e=>{drafts['ausg.name']=e.target.value}})),
+        canWrite===false?null:newIssue?h('div',{class:'formular',style:'margin:0'},terminFelder('ausg',{}),
           h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:neueAusgabe},'Ausgabe anlegen'),h('button',{class:'btn',type:'button',onclick:()=>{newIssue=false;render()}},'Abbrechen'))):
           h('button',{class:'btn',type:'button',style:'align-self:flex-start',onclick:()=>{newIssue=true;render()}},'Ausgabe anlegen'),
         h('p',{class:'hinweis-fuss'},'Die Reihenfolge in einer Ausgabe bestimmt die Reihenfolge im Newsletter. Vorschau und Export als HTML folgen in der nächsten Stufe.'))),

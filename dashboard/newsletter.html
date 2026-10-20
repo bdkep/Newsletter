@@ -127,7 +127,7 @@ async function erzeugen(c){
   if(!sample)return toast('Die Texterzeugung ist in dieser Ansicht nicht verfügbar. Der Text lässt sich von Hand schreiben.');
   genBusy.add(c.id);render();
   try{
-    const r=await sample(STIL+'\n\n--- Quelle ---\n'+quellText(c),{cache:false,modelTier:'default'});
+    const r=await sample(stilPrompt()+'\n\n--- Quelle ---\n'+quellText(c),{cache:false,modelTier:'default'});
     const m=String((r&&r.text)||'').match(/\{[\s\S]*\}/);const j=JSON.parse(m?m[0]:'');
     drafts[c.id+'.tu']=String(j.ueberschrift||'').trim();drafts[c.id+'.tk']=String(j.kurztext||'').trim();drafts[c.id+'.tl']=String(j.linkText||'').trim();
     vorschlagIds.add(c.id);toast('Vorschlag liegt vor. Bitte prüfen, anpassen und speichern.',5000);
@@ -152,11 +152,11 @@ function textPanel(c){
   const n=WORDS(tk.value),read=()=>({u:dk('tu',tb.ueberschrift||''),k:dk('tk',tb.kurztext||''),l:dk('tl',tb.linkText||'')});
   const w=h('div',{class:'tb'},h('div',{class:'zeile'},h('h4',{},'Newsletter-Text'),
     c.tb?h('span',{class:'badge',style:tb.freigegeben?'background:#E1F1E9;color:#1E5A40':'background:#FFF6DD;color:#4A3608'},tb.freigegeben?'Freigegeben':'Entwurf'):h('span',{class:'badge',style:'background:#E8EBEF;color:#2B3440'},'Noch kein Text'),
-    c.tb?h('span',{class:'muted'},(tb.durch==='api'?'Vorschlag von Claude, bearbeitet':'von Hand')+' · '+dat(tb.am,true)):null));
+    c.tb?h('span',{class:'muted'},(tb.durch==='api'?'Vorschlag von Claude, bearbeitet':tb.durch==='archiv'?'aus dem Archiv übernommen':'von Hand')+' · '+dat(tb.am,true)):null));
   if(vorschlagIds.has(c.id))w.append(h('div',{class:'warn warn-k'},h('strong',{},'Vorschlag von Claude, noch nicht gespeichert.'),' Alle Angaben bitte mit der Quelle abgleichen. Stellen mit [Angabe fehlt] oder [Link einfügen] ergänzen.'));
   if(canWrite!==false){
     if(askIds.has(c.id))w.append(h('div',{class:'senden'},h('strong',{},'Das wird an Claude gesendet:'),
-      h('ul',{},h('li',{},'Titel und Text dieser Quelle ('+(c.text||'').length+' Zeichen)'),c.url?h('li',{},'der Link der Quelle'):null,c.typ==='mail'&&c.mailBetreff?h('li',{},'der Betreff der Mail'):null,c.hinweisText?h('li',{},'dein Hinweistext (nur zur Prüfung)'):null),
+      h('ul',{},h('li',{},'Titel und Text dieser Quelle ('+(c.text||'').length+' Zeichen)'),c.url?h('li',{},'der Link der Quelle'):null,c.typ==='mail'&&c.mailBetreff?h('li',{},'der Betreff der Mail'):null,c.hinweisText?h('li',{},'dein Hinweistext (nur zur Prüfung)'):null,stilBeispiele().length?h('li',{},'Stilbeispiele aus dem Archiv ('+stilBeispiele().length+' Abschnitte bereits versendeter Newsletter)'):null),
       h('div',{},'Nicht gesendet: Absender der Mail. Enthält der Text Namen oder Adressen, gehen sie mit.'),
       h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>erzeugen(c)},'Jetzt senden'),h('button',{class:'btn',type:'button',onclick:()=>{askIds.delete(c.id);render()}},'Abbrechen'))));
     else w.append(h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',disabled:genBusy.has(c.id)||!c.text&&!c.url,onclick:()=>{askIds.add(c.id);render()}},genBusy.has(c.id)?'Claude schreibt …':(c.tb?'Neuen Vorschlag erzeugen':'Kurztext vorschlagen')),
@@ -198,10 +198,13 @@ async function neueQuelle(f){
   if(ok){showNew=false;['t','u','b','a','d','x'].forEach(k=>delete drafts['neu.'+k]);render()}
 }
 async function neueAusgabe(){
-  const name=(drafts['ausg.name']||'').trim();if(!name)return toast('Bitte einen Namen eintragen, z. B. „Januar 2027“.');
+  const name=(drafts['ausg.name']||'').trim(),datum=drafts['ausg.datum']||'',zeit=drafts['ausg.zeit']||'';
+  if(!name)return toast('Bitte einen Namen eintragen, z. B. „Januar 2027“.');
+  if(!datum)return toast('Bitte einen Versandtermin wählen. Jede Ausgabe braucht einen Termin.');
+  if(datum<heuteBerlin())return toast('Das Versanddatum liegt in der Vergangenheit.');
   const id='a-'+Date.now().toString(36);
-  const ok=await schreiben(()=>db.doc('ausgaben/'+id).set({name,reihenfolge:Date.now(),angelegtAm:new Date().toISOString()}),'Ausgabe angelegt.');
-  if(ok){newIssue=false;delete drafts['ausg.name'];render()}
+  const ok=await schreiben(()=>db.doc('ausgaben/'+id).set({name,versanddatum:datum,versandzeit:zeit,notiz:(drafts['ausg.notiz']||'').trim(),status:'planung',reihenfolge:Date.now(),angelegtAm:new Date().toISOString()}),'Ausgabe mit Versandtermin angelegt.');
+  if(ok){newIssue=false;['name','datum','zeit','notiz'].forEach(k=>delete drafts['ausg.'+k]);render()}
 }
 const loeschen=c=>schreiben(async()=>{await db.doc('quellen/'+c.id).delete();delIds.delete(c.id);openIds.delete(c.id)},'Quelle gelöscht.');
 function parseEml(raw){
@@ -258,7 +261,7 @@ function karte(c){
   }
   if(isOpen)el.append(textPanel(c));
   if(canWrite!==false&&status(c)!=='beobachtung'){
-    el.append(h('div',{class:'knoepfe'},ausgaben.map(a=>h('button',{class:'btn',type:'button',onclick:()=>zuordnen(c,a.id)},'In Ausgabe '+a.name.replace(/\s*\d{4}$/,'')))));
+    el.append(h('div',{class:'knoepfe'},aktiv().map(a=>h('button',{class:'btn',type:'button',onclick:()=>zuordnen(c,a.id)},'In Ausgabe '+a.name.replace(/\s*\d{4}$/,'')))));
   }else if(status(c)==='beobachtung')el.append(h('div',{class:'muted'},'Beobachtung, kein Newsletterthema.'));
   el.append(h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button','aria-expanded':String(isOpen),onclick:flip},isOpen?'Weniger anzeigen':'Details'),
     canWrite===false?null:delIds.has(c.id)?[h('button',{class:'btn danger',type:'button',onclick:()=>loeschen(c)},'Wirklich löschen'),h('button',{class:'btn',type:'button',onclick:()=>{delIds.delete(c.id);render()}},'Abbrechen')]:
@@ -268,9 +271,13 @@ function karte(c){
 function ausgabePanel(a){
   const l=inAusgabe(a.id),warnN=l.filter(x=>x.hinweisText).length;
   return h('div',{class:'ausgabe'},
-    h('div',{class:'kopf2'},h('h2',{},'Ausgabe '+a.name),h('div',{class:'muted'},l.length+(l.length===1?' Thema':' Themen')+' · '+warnN+' mit Hinweis · '+l.filter(x=>x.tb&&x.tb.freigegeben).length+' Texte freigegeben')),
+    h('div',{class:'kopf2'},h('h2',{},'Ausgabe '+a.name),h('div',{class:'muted'},(a.versanddatum?'Versand '+datTag(a.versanddatum)+(a.versandzeit?', '+a.versandzeit+' Uhr':'')+' · ':'Termin offen · ')+l.length+(l.length===1?' Thema':' Themen')+' · '+warnN+' mit Hinweis · '+l.filter(x=>x.tb&&x.tb.freigegeben).length+' Texte freigegeben')),
     h('div',{class:'inhalt'},
-      l.length?h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:()=>kopieren(a)},'Texte der Ausgabe kopieren')):null,
+      !a.versanddatum?h('div',{class:'warn warn-k'},'Für diese Ausgabe fehlt der Versandtermin.'):null,
+      termEdit.has(a.id)&&canWrite!==false?h('div',{class:'formular',style:'margin:0'},terminFelder(a.id,{name:a.name,datum:a.versanddatum,zeit:a.versandzeit,notiz:a.notiz}),
+        h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>termSpeichern(a)},'Termin speichern'),h('button',{class:'btn',type:'button',onclick:()=>{termEdit.delete(a.id);['name','datum','zeit','notiz'].forEach(k=>delete drafts[a.id+'.'+k]);render()}},'Abbrechen'))):null,
+      h('div',{class:'knoepfe'},canWrite===false||termEdit.has(a.id)?null:h('button',{class:'btn'+(a.versanddatum?'':' primary'),type:'button',onclick:()=>{termEdit.add(a.id);render()}},a.versanddatum?'Termin ändern':'Termin eintragen'),
+        l.length?h('button',{class:'btn',type:'button',onclick:()=>kopieren(a)},'Texte der Ausgabe kopieren'):null),
       !l.length?h('p',{class:'leer'},'Noch keine Themen zugeordnet. Im Eingangskorb „In Ausgabe '+a.name.replace(/\s*\d{4}$/,'')+'“ wählen.'):null,
       l.map((c,i)=>{const s=SRC[c.typ]||SRC.note;return h('div',{class:'pos'},
         h('div',{class:'zeile'},h('span',{class:'nr'},'Position '+(i+1)),h('span',{class:'badge',style:s.s},s.l)),
@@ -286,7 +293,8 @@ const PERSONEN=['Andreas','Moritz'];
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
 let me=PERSONEN.includes(lsGet('nl.me'))?lsGet('nl.me'):'';
-let view=lsGet('nl.view')==='wuensche'?'wuensche':'eingang';
+const VIEWS=['eingang','termine','archiv','wuensche'];
+let view=VIEWS.includes(lsGet('nl.view'))?lsGet('nl.view'):'eingang';
 let wunsch=[],wLoaded=false,wLoadError='',wFilter=lsGet('nl.wfilter')||'offen',wq='',wForm=false,wSaving=false;
 const wCard=new Set(),wHist=new Set(),wEdit=new Set(),wBusy=new Set(),wCtl={},wPr={},wPrBusy=new Set(),wPrCtl={};
 let aend=[],besuche={},aendForm=false;const aeAlt=new Set();
@@ -316,7 +324,9 @@ const ABLAEUFE="- Eingangskorb: Quellen (Mail, Datei, Web, Notiz) werden von Han
 "- Export: Kopieren des Textes der Ausgabe ist da, Vorschau und HTML-Export folgen (Stufe 5), Prüfung in Stufe 6. Der Export enthält nur freigegebene Texte, keine internen Hinweise und Quelldaten.\n"+
 "- Design: Farben, Schrift und Logos kommen aus `design/`, das Dashboard erfindet kein Design.\n"+
 "- Wünsche: Sammlung `wuensche`. Status `offen`, `ausgearbeitet`, `geprueft` (Einbauprüfung gespeichert), `erledigt`, `geschlossen` (nicht umgesetzt; geschlossene Wünsche zählen bei der Einbauprüfung nicht mit). Ausarbeitung (Story, Kriterien, Erfolgsmaß) bestätigt der Autor. Danach ist \"Einbau prüfen\" der feste nächste Schritt; ein ausgearbeiteter Wunsch wird erst nach gespeicherter Einbauprüfung erledigt. Ändert sich die Ausarbeitung, entfällt die Prüfung. Nach Erledigt beantwortet der Autor \"Bewährt?\". Ein Wunsch wird von einer Person erledigt, nie vom Agenten.\n"+
-"- Dashboard: Reiter Eingangskorb und Wünsche. Anmeldung durch Auswahl der Person (Andreas, Moritz). Schreibrechte hängen an der Stufe \"Contributor\". Gemeinsame Datenbank.\n"+
+"- Versandplan: Sammlung `ausgaben` mit `versanddatum` (JJJJ-MM-TT), `versandzeit` (optional), `notiz`, `status` (`planung`, `versendet`). Jede neue Ausgabe braucht einen Termin (Pflicht beim Anlegen, im Eingangskorb wie im Versandplan). Der Termin lässt sich im Versandplan und direkt in der Ausgabe ändern. Ausgaben stehen nach Termin aufsteigend, der späteste zuletzt, ohne Termin ganz am Ende (nur Bestand von vor der Pflicht). \"Als versendet ins Archiv\" geht nur mit freigegebenen Texten, legt `archiv/v-<Ausgabe-ID>` an und nimmt die Ausgabe aus Planung und Zuordnung. Gelöscht werden nur Ausgaben ohne Themen.\n"+
+"- Archiv: Sammlung `archiv` mit bereits versendeten Newslettern (`name`, `versanddatum`, `abschnitte` mit Überschrift, Text, Link). Zweck: Aufbau, Ausdruck und Grammatik vereinheitlichen, auf ältere Meldungen verweisen, Abschnitte in neue Ausgaben übernehmen. Eine Übernahme legt eine Quelle mit Text im Entwurf an (nie freigegeben, mit Hinweis zur Aktualitätsprüfung). Als Stilvorbild markierte Newsletter gehen mit höchstens 3 Newslettern und 2 Abschnitten je Newsletter als Beispiele in den Claude-Vorschlag (steht in der Sendevorschau).\n"+
+"- Dashboard: Reiter Eingangskorb, Versandplan, Archiv und Wünsche. Anmeldung durch Auswahl der Person (Andreas, Moritz). Schreibrechte hängen an der Stufe \"Contributor\". Gemeinsame Datenbank.\n"+
 "- Datenschutz: Mails und Dokumente können vertrauliche oder personenbezogene Inhalte enthalten; keine echten Mails oder Quelltexte im Repo, Tests nur mit Testdaten.";
 const LEITPLANKEN="- Zuerst `README.md`, `newsletter-dashboard-vorgabe.md` und `style.md` lesen, sie sind verbindlich.\n- Auf einem eigenen Branch arbeiten, nicht auf `main`. Keinen Pull Request öffnen und nichts veröffentlichen, bevor die Person es ausdrücklich sagt.\n- Zuerst eine kurze Einbauanalyse schreiben: welche Stellen betroffen sind, was bei bestehenden Daten ohne neue Felder passiert.\n- Nichts erfinden, keine Design-Werte erfinden (`design/` ist maßgeblich). Mails und Quelltexte nicht ins Repo schreiben.\n- Gmail nur lesen. Keine Texte automatisch freigeben, keine Daten ohne Klick an Claude senden.\n- Änderungen klein halten und nur die Dateien anfassen, die der Wunsch braucht.";
 const mutateIn=async(col,id,fn,logText,okMsg)=>{
@@ -700,6 +710,216 @@ function wuenscheView(){
       wLoaded&&wunsch.length&&!list.length?h('p',{class:'leer'},wq.trim()?'Zu "'+wq.trim()+'" gibt es keinen Treffer in diesem Filter.':'Nichts in dieser Ansicht. Wähle oben einen anderen Filter.'):null,
       list.map(wcard))));
 }
+/* ---- Versandplan und Archiv ----
+   Sammlung `ausgaben`: name, versanddatum (JJJJ-MM-TT), versandzeit (HH:MM, optional), notiz, status (planung | versendet), versendetAm, reihenfolge, angelegtAm.
+   Sammlung `archiv`: name, versanddatum, titel, einleitung, abschnitte [{ueberschrift,text,linkText,url}], abbinder, stilvorbild, notiz,
+   quelle (import | hand | ausgabe), ausgabeId, erfasstAm. Zweck: Aufbau, Ausdruck und Grammatik vereinheitlichen, auf ältere Meldungen verweisen, Abschnitte übernehmen. */
+let archiv=[],aLoaded=false,aq='',aFilter='alle',aForm=false,termForm=false;
+const aOpen=new Set(),termEdit=new Set();
+const aktiv=()=>ausgaben.filter(a=>a.status!=='versendet');
+const wochentag=new Intl.DateTimeFormat('de-DE',{weekday:'long',timeZone:'Europe/Berlin'});
+const datTag=s=>{if(!s)return '';const d=new Date(s+'T12:00:00');return isNaN(d)?s:wochentag.format(d)+', '+fmtD.format(d)};
+/* Ausgaben nach Versanddatum aufsteigend (spätester Termin zuletzt), ohne Termin ganz am Ende */
+const ausSort=(x,y)=>(x.versanddatum&&y.versanddatum?x.versanddatum.localeCompare(y.versanddatum)||(x.versandzeit||'').localeCompare(y.versandzeit||''):x.versanddatum?-1:y.versanddatum?1:0)||(x.reihenfolge||0)-(y.reihenfolge||0);
+const abschnitteOf=n=>Array.isArray(n&&n.abschnitte)?n.abschnitte.filter(a=>a&&(a.ueberschrift||a.text)):[];
+const archivText=n=>(n.name||'Newsletter')+(n.versanddatum?' ('+fmtD.format(new Date(n.versanddatum+'T12:00:00'))+')':'')+'\n\n'+(n.einleitung?n.einleitung+'\n\n':'')+abschnitteOf(n).map((a,i)=>(i+1)+'. '+a.ueberschrift+'\n'+a.text).join('\n\n');
+const archivVolltext=n=>[n.name,n.titel,n.einleitung,n.notiz,...abschnitteOf(n).flatMap(a=>[a.ueberschrift,a.text])].filter(Boolean).join('\n');
+const stilBeispiele=()=>archiv.filter(n=>n.stilvorbild).sort((x,y)=>(y.versanddatum||'').localeCompare(x.versanddatum||'')).slice(0,3)
+  .flatMap(n=>abschnitteOf(n).slice(0,2).map(a=>'Überschrift: '+a.ueberschrift+'\nKurztext: '+String(a.text||'').slice(0,900)));
+function stilPrompt(){
+  const bsp=stilBeispiele(),i=STIL.lastIndexOf('Antworte ausschließlich mit JSON');
+  if(!bsp.length||i<0)return STIL;
+  return STIL.slice(0,i)+'Stilvorbilder aus bereits versendeten Newslettern (nur Aufbau, Ton, Satzbau und Grammatik übernehmen, keine Angaben):\n'+bsp.join('\n')+'\n'+STIL.slice(i);
+}
+/* Abschnitte aus einem versendeten HTML-Newsletter lesen: je Überschrift (h2) ein Abschnitt aus den Absätzen, Listen und Hervorhebungen des umgebenden Blocks */
+function abschnitteAusHtml(src){
+  const d=new DOMParser().parseFromString(src,'text/html'),out=[];
+  d.querySelectorAll('h2').forEach(h2=>{
+    const box=h2.closest('.sec')||h2.parentElement,c=h2.cloneNode(true);c.querySelectorAll('.n').forEach(x=>x.remove());
+    const ue=c.textContent.replace(/\s+/g,' ').trim();let text='',prevLi=false,linkText='',url='';
+    box.querySelectorAll('p,li,.hl,a.btn').forEach(el=>{
+      if(el.matches('a.btn')){linkText=el.textContent.replace(/\s+/g,' ').trim();const hr=el.getAttribute('href')||'';url=/^https?:\/\//i.test(hr)?hr:'';return}
+      if(!el.matches('.hl')&&el.closest('.hl'))return;
+      const t=el.textContent.replace(/\s+/g,' ').trim();if(!t)return;
+      const li=el.matches('li');text+=(text?(li&&prevLi?'\n':'\n\n'):'')+(li?'- ':'')+t;prevLi=li;
+    });
+    if(ue||text)out.push({ueberschrift:ue,text,linkText,url});
+  });
+  return out;
+}
+const abschnitteText=l=>l.map(a=>a.ueberschrift+'\n'+a.text+(a.url?'\n'+(a.linkText?a.linkText+': ':'')+a.url:'')).join('\n---\n');
+function abschnitteAusText(t){
+  return String(t||'').replace(/\r\n/g,'\n').split(/\n\s*-{3,}\s*\n/).map(b=>b.trim()).filter(Boolean).map(b=>{const z=b.split('\n');return{ueberschrift:z[0].trim(),text:z.slice(1).join('\n').trim(),linkText:'',url:''}});
+}
+const archivUpd=(n,p,msg)=>schreiben(()=>db.doc('archiv/'+n.id).update(p),msg);
+const archivLoeschen=n=>schreiben(async()=>{await db.doc('archiv/'+n.id).delete();delIds.delete('ar-'+n.id);aOpen.delete(n.id)},'Newsletter aus dem Archiv gelöscht.');
+async function archivAnlegen(){
+  const name=(drafts['arch.name']||'').trim(),datum=drafts['arch.datum']||'',ab=abschnitteAusText(drafts['arch.text']);
+  if(!name)return toast('Bitte einen Namen eintragen, z. B. „Newsletter 30.09.2026“.');
+  if(!datum)return toast('Bitte das Versanddatum angeben.');
+  if(!ab.length)return toast('Bitte mindestens einen Abschnitt eintragen: erste Zeile Überschrift, darunter der Text.');
+  const id='i-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  const ok=await schreiben(()=>db.doc('archiv/'+id).set({name,versanddatum:datum,titel:(drafts['arch.titel']||'').trim(),einleitung:'',abschnitte:ab,abbinder:'',stilvorbild:false,notiz:'',quelle:'import',erfasstAm:nowIso()}),'Im Archiv abgelegt.');
+  if(ok){aForm=false;['name','datum','titel','text'].forEach(k=>delete drafts['arch.'+k]);render()}
+}
+/* Abschnitt als Entwurf in eine Ausgabe übernehmen: Quelle mit Text im Entwurf, nie freigegeben, mit Hinweis zur Aktualitätsprüfung */
+function uebernehmen(n,a,ausId){
+  if(!ausId)return toast('Bitte zuerst eine Ausgabe wählen.');
+  const id='h-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),pos=Math.max(0,...inAusgabe(ausId).map(x=>x.position||0))+1,t=nowIso();
+  const ku=a.text+(a.url&&!String(a.text).includes(a.url)?'\n'+a.url:'');
+  return schreiben(()=>db.doc('quellen/'+id).set({typ:'note',titel:a.ueberschrift||'Ohne Titel',text:ku,url:a.url||'',mailBetreff:'',mailAbsender:'',mailDatum:'',quelle:'archiv',erfasstAm:t,erfasstVon:'Archiv',status:'vorschlag',ausgabe:ausId,position:pos,
+    hinweisArt:'warn',hinweisText:'Aus „'+n.name+'“ übernommen. Angaben, Termine und Fristen auf Aktualität prüfen.',
+    tb:{ueberschrift:a.ueberschrift||'',kurztext:ku,linkText:a.linkText||'',durch:'archiv',am:t,freigegeben:false}}),'Als Entwurf in die Ausgabe übernommen. Freigabe steht noch aus.');
+}
+function archivStat(){
+  const ab=archiv.flatMap(abschnitteOf);if(!archiv.length||!ab.length)return null;
+  const avg=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):0;
+  return{abschnitte:avg(archiv.map(n=>abschnitteOf(n).length)),woerter:avg(ab.map(a=>WORDS(a.text))),ueberschrift:avg(ab.map(a=>WORDS(a.ueberschrift)))};
+}
+function archivKarte(n){
+  const isOpen=aOpen.has(n.id),ab=abschnitteOf(n),canAct=canWrite!==false,flip=()=>{isOpen?aOpen.delete(n.id):aOpen.add(n.id);render()};
+  const el=h('article',{class:'k',id:'ar-'+n.id});
+  el.append(h('div',{class:'zeile'},n.versanddatum?h('span',{class:'pill neu'},fmtD.format(new Date(n.versanddatum+'T12:00:00'))):null,h('span',{class:'pill'},ab.length+(ab.length===1?' Abschnitt':' Abschnitte')),n.stilvorbild?h('span',{class:'pill ok'},'Stilvorbild'):null,
+    n.quelle==='ausgabe'?h('span',{class:'muted'},'aus dem Dashboard versendet'):null));
+  el.append(h('h3',{},n.name||'Newsletter'));
+  if(n.titel)el.append(h('p',{},n.titel));
+  if(!isOpen)el.append(h('ol',{class:'meta',style:'margin:0;padding-left:20px'},ab.map(a=>h('li',{},a.ueberschrift))));
+  if(isOpen){
+    if(n.einleitung)el.append(h('div',{class:'tb'},h('h4',{},'Einleitung'),h('p',{style:'white-space:pre-wrap'},n.einleitung)));
+    const sel=ausgaben.length?aktiv():[];
+    ab.forEach((a,i)=>{
+      const wk='ue.'+n.id+'.'+i,s=h('select',{id:'ue-'+n.id+'-'+i,'aria-label':'Ausgabe wählen',onchange:e=>{drafts[wk]=e.target.value}},sel.map(x=>h('option',{value:x.id},x.name+(x.versanddatum?' ('+fmtD.format(new Date(x.versanddatum+'T12:00:00'))+')':''))));
+      s.value=drafts[wk]!==undefined?drafts[wk]:(sel[0]?sel[0].id:'');
+      el.append(h('div',{class:'tb'},h('h4',{},(i+1)+'. '+a.ueberschrift),h('p',{style:'white-space:pre-wrap'},a.text),
+        a.url||a.linkText?h('div',{class:'meta'},(a.linkText?'Schaltfläche: '+a.linkText:'')+(a.url?(a.linkText?' · ':'')+a.url:'')):null,
+        h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:()=>copyText(a.ueberschrift+'\n'+a.text,'Abschnitt')},'Abschnitt kopieren')),
+        canAct?(sel.length?h('div',{class:'raster'},h('label',{class:'feld'},'In neue Ausgabe übernehmen',s),h('div',{style:'display:flex;align-items:flex-end'},h('button',{class:'btn primary',type:'button',onclick:()=>uebernehmen(n,a,s.value)},'Als Entwurf übernehmen'))):h('span',{class:'muted'},'Zum Übernehmen zuerst im Versandplan eine Ausgabe anlegen.')):null));
+    });
+    if(n.abbinder)el.append(h('div',{class:'meta'},'Abbinder: '+n.abbinder));
+    if(n.notiz)el.append(h('div',{class:'meta'},'Notiz: '+n.notiz));
+  }
+  el.append(h('div',{class:'knoepfe'},h('button',{class:'btn','aria-expanded':String(isOpen),onclick:flip},isOpen?'Weniger anzeigen':'Texte ansehen'),
+    h('button',{class:'btn',type:'button',onclick:()=>copyText(archivText(n),'Newsletter')},'Newsletter kopieren'),
+    canAct?h('button',{class:'btn'+(n.stilvorbild?' on':''),type:'button','aria-pressed':String(!!n.stilvorbild),onclick:()=>archivUpd(n,{stilvorbild:!n.stilvorbild},n.stilvorbild?'Nicht mehr als Stilvorbild verwendet.':'Wird künftig als Stilvorbild für Textvorschläge verwendet.')},'Stilvorbild'):null,
+    canAct?(delIds.has('ar-'+n.id)?[h('button',{class:'btn danger',type:'button',onclick:()=>archivLoeschen(n)},'Wirklich löschen'),h('button',{class:'btn',type:'button',onclick:()=>{delIds.delete('ar-'+n.id);render()}},'Abbrechen')]:
+      h('button',{class:'btn danger',type:'button',onclick:()=>{delIds.add('ar-'+n.id);render()}},'Löschen')):null));
+  return el;
+}
+function archivView(){
+  const q=aq.trim().toLowerCase(),canAct=canWrite!==false,st=archivStat();
+  const list=archiv.filter(n=>(aFilter==='alle'||n.stilvorbild)&&(!q||archivVolltext(n).toLowerCase().includes(q))).sort((x,y)=>(y.versanddatum||'').localeCompare(x.versanddatum||''));
+  const nStil=archiv.filter(n=>n.stilvorbild).length;
+  const dk=(k)=>drafts['arch.'+k]!==undefined?drafts['arch.'+k]:'';
+  const fl=(k,lab,type)=>{const i=h('input',{id:'arch-'+k,type,oninput:e=>{drafts['arch.'+k]=e.target.value}});i.value=dk(k);return h('label',{class:'feld'},lab,i)};
+  const tx=h('textarea',{id:'arch-text','aria-label':'Abschnitte',style:'min-height:220px',placeholder:'Je Abschnitt: erste Zeile Überschrift, darunter der Text. Abschnitte durch eine Zeile mit --- trennen.',oninput:e=>{drafts['arch.text']=e.target.value}});tx.value=dk('text');
+  const file=h('input',{id:'arch-file',type:'file',accept:'.txt,.md,.html,.htm',onchange:async e=>{
+    const f=e.target.files[0];if(!f)return;const raw=await f.text();
+    if(/\.html?$/i.test(f.name)){
+      const l=abschnitteAusHtml(raw);if(!l.length)return toast('Im HTML keine Überschriften (h2) gefunden. Bitte den Text einfügen.');
+      const doc=new DOMParser().parseFromString(raw,'text/html'),t=(doc.querySelector('h1')||{}).textContent;
+      drafts['arch.text']=abschnitteText(l);if(t&&!drafts['arch.titel'])drafts['arch.titel']=t.replace(/\s+/g,' ').trim();
+      const m=f.name.match(/(\d{4})-(\d{2})-(\d{2})/);if(m&&!drafts['arch.datum'])drafts['arch.datum']=m[0];
+      toast(l.length+' Abschnitte gelesen. Bitte prüfen, Name und Datum ergänzen und ablegen.',6000);
+    }else drafts['arch.text']=raw;
+    render()}});
+  return h('main',{class:'gutter'},h('section',{class:'links','aria-label':'Archiv'},
+    h('div',{class:'sec-head'},
+      h('div',{class:'sec-top'},h('h2',{},'Archiv versendeter Newsletter'),h('span',{class:'muted'},list.length+(list.length===1?' Newsletter':' Newsletter')+' in dieser Ansicht')),
+      h('p',{class:'muted',style:'margin:8px 0 0'},'Vorlage für Aufbau, Ausdruck und Grammatik neuer Texte, zum Nachschlagen älterer Meldungen und zum Übernehmen einzelner Abschnitte in eine neue Ausgabe. Als Stilvorbild markierte Newsletter fließen in die Textvorschläge ein.'),
+      h('div',{class:'chips',role:'group','aria-label':'Filter Archiv'},[['alle','Alle ('+archiv.length+')'],['stil','Stilvorbilder ('+nStil+')']].map(([k,t])=>h('button',{class:'btn'+(aFilter===k?' on':''),type:'button','aria-pressed':String(aFilter===k),onclick:()=>{aFilter=k;render()}},t)),
+        canAct?h('button',{class:'btn primary',type:'button',style:'margin-left:auto',onclick:()=>{aForm=!aForm;render()}},'Newsletter ablegen'):null),
+      h('div',{class:'chips'},h('input',{id:'asuche',type:'search',placeholder:'Archiv durchsuchen (Überschriften und Texte)','aria-label':'Archiv durchsuchen',value:aq,oninput:e=>{aq=e.target.value;render()}})),
+      st?h('div',{class:'abruf'},h('b',{},'Üblicher Aufbau'),h('span',{},'Ø '+st.abschnitte+' Abschnitte je Newsletter'),h('span',{},'Ø '+st.woerter+' Wörter je Abschnitt'),h('span',{},'Überschriften Ø '+st.ueberschrift+' Wörter')):null),
+    aForm&&canAct?h('div',{class:'formular'},h('h2',{},'Newsletter ablegen'),
+      h('div',{class:'raster'},fl('name','Name','text'),fl('datum','Versanddatum','date'),h('div',{class:'breit'},fl('titel','Titel oder Schwerpunkte (optional)','text')),
+        h('label',{class:'feld breit'},'Abschnitte',tx),h('label',{class:'feld breit'},'Datei lesen (.html, .txt, .md)',file)),
+      h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:archivAnlegen},'Im Archiv ablegen'),h('button',{class:'btn',type:'button',onclick:()=>{aForm=false;render()}},'Abbrechen'))):null,
+    h('div',{class:'wliste'},
+      !aLoaded?h('p',{class:'leer'},'Lade Archiv …'):null,
+      aLoaded&&!archiv.length?h('p',{class:'leer'},'Noch kein Newsletter im Archiv. Lege einen mit „Newsletter ablegen“ ab oder markiere im Versandplan eine Ausgabe als versendet.'):null,
+      aLoaded&&archiv.length&&!list.length?h('p',{class:'leer'},'Keine Treffer in dieser Ansicht.'):null,
+      list.map(archivKarte))));
+}
+/* ---- Versandplan ---- */
+function terminFelder(p,v){
+  const fl=(k,lab,type,ph)=>{const i=h('input',{id:p+'-'+k,type,placeholder:ph||null,oninput:e=>{drafts[p+'.'+k]=e.target.value}});i.value=drafts[p+'.'+k]!==undefined?drafts[p+'.'+k]:(v[k]||'');return h('label',{class:'feld'},lab,i)};
+  return h('div',{class:'raster'},fl('name','Name der Ausgabe','text','z. B. Januar 2027'),fl('datum','Versanddatum','date'),fl('zeit','Uhrzeit (optional)','time'),fl('notiz','Interne Notiz (optional)','text'));
+}
+async function termAnlegen(){
+  const name=(drafts['term.name']||'').trim(),datum=drafts['term.datum']||'',zeit=drafts['term.zeit']||'',notiz=(drafts['term.notiz']||'').trim();
+  if(!name)return toast('Bitte einen Namen eintragen, z. B. „Januar 2027“.');
+  if(!datum)return toast('Bitte ein Versanddatum wählen.');
+  if(datum<heuteBerlin())return toast('Das Versanddatum liegt in der Vergangenheit.');
+  const id='a-'+Date.now().toString(36);
+  const ok=await schreiben(()=>db.doc('ausgaben/'+id).set({name,versanddatum:datum,versandzeit:zeit,notiz,status:'planung',reihenfolge:Date.now(),angelegtAm:nowIso()}),'Versandtermin angelegt.');
+  if(ok){termForm=false;['name','datum','zeit','notiz'].forEach(k=>delete drafts['term.'+k]);render()}
+}
+async function termSpeichern(a){
+  const g=(k,d)=>drafts[a.id+'.'+k]!==undefined?drafts[a.id+'.'+k]:d;
+  const name=(g('name',a.name)||'').trim(),datum=g('datum',a.versanddatum||'');
+  if(!name)return toast('Der Name darf nicht leer sein.');
+  if(!datum)return toast('Bitte ein Versanddatum wählen.');
+  const ok=await schreiben(()=>db.doc('ausgaben/'+a.id).update({name,versanddatum:datum,versandzeit:g('zeit',a.versandzeit||''),notiz:(g('notiz',a.notiz||'')||'').trim()}),'Termin gespeichert.');
+  if(ok){['name','datum','zeit','notiz'].forEach(k=>delete drafts[a.id+'.'+k]);termEdit.delete(a.id);render()}
+}
+const termLoeschen=a=>schreiben(async()=>{await db.doc('ausgaben/'+a.id).delete();delIds.delete('t-'+a.id);termEdit.delete(a.id)},'Ausgabe gelöscht.');
+/* Versendet: freigegebene Texte wandern als Newsletter ins Archiv, die Ausgabe verschwindet aus Planung und Zuordnung */
+function alsVersendet(a){
+  const ab=inAusgabe(a.id).filter(c=>c.tb&&c.tb.freigegeben).map(c=>({ueberschrift:c.tb.ueberschrift||c.titel||'',text:c.tb.kurztext||'',linkText:c.tb.linkText||'',url:''}));
+  if(!ab.length)return toast('Ohne freigegebene Texte lässt sich die Ausgabe nicht ins Archiv legen.');
+  return schreiben(async()=>{
+    await db.doc('archiv/v-'+a.id).set({name:a.name,versanddatum:a.versanddatum||heuteBerlin(),titel:'',einleitung:'',abschnitte:ab,abbinder:'',stilvorbild:false,notiz:a.notiz||'',quelle:'ausgabe',ausgabeId:a.id,erfasstAm:nowIso()});
+    await db.doc('ausgaben/'+a.id).update({status:'versendet',versendetAm:nowIso()});
+    delIds.delete('v-'+a.id);
+  },'Im Archiv abgelegt. Die Ausgabe ist aus dem Versandplan genommen.');
+}
+function termKarte(a){
+  const l=inAusgabe(a.id),fr=l.filter(x=>x.tb&&x.tb.freigegeben).length,heute=heuteBerlin(),canAct=canWrite!==false,editing=termEdit.has(a.id);
+  const ueber=!!a.versanddatum&&a.versanddatum<heute,tage=a.versanddatum?Math.round((new Date(a.versanddatum+'T12:00:00')-new Date(heute+'T12:00:00'))/864e5):null;
+  const el=h('article',{class:'k',id:'t-'+a.id});
+  el.append(h('div',{class:'zeile'},
+    h('span',{class:'pill'+(ueber?' bad':a.versanddatum?' neu':' warn')},a.versanddatum?datTag(a.versanddatum)+(a.versandzeit?', '+a.versandzeit+' Uhr':''):'Termin offen'),
+    a.versanddatum&&!ueber?h('span',{class:'muted'},tage===0?'heute':tage===1?'morgen':'in '+tage+' Tagen'):null,
+    ueber?h('span',{class:'muted'},'Termin überschritten'):null));
+  el.append(h('h3',{},a.name),h('div',{class:'meta'},l.length+(l.length===1?' Thema':' Themen')+' · '+fr+' Texte freigegeben'));
+  if(a.notiz)el.append(h('p',{},a.notiz));
+  if(ueber)el.append(h('div',{class:'warn crit'},'Das Versanddatum ist vorbei. Termin ändern oder die Ausgabe als versendet ins Archiv legen.'));
+  if(!a.versanddatum)el.append(h('div',{class:'warn warn-k'},'Für diese Ausgabe ist noch kein Versandtermin eingetragen.'));
+  if(editing&&canAct)el.append(h('div',{class:'formular',style:'margin:0'},terminFelder(a.id,{name:a.name,datum:a.versanddatum,zeit:a.versandzeit,notiz:a.notiz}),
+    h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>termSpeichern(a)},'Termin speichern'),h('button',{class:'btn',type:'button',onclick:()=>{termEdit.delete(a.id);['name','datum','zeit','notiz'].forEach(k=>delete drafts[a.id+'.'+k]);render()}},'Abbrechen'))));
+  if(canAct){
+    if(delIds.has('v-'+a.id))el.append(h('div',{class:'senden'},h('strong',{},'Als versendet ablegen?'),h('div',{},fr+(fr===1?' freigegebener Text wird':' freigegebene Texte werden')+' als Newsletter im Archiv abgelegt. Die Ausgabe verschwindet aus Versandplan und Zuordnung.'),
+      h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>alsVersendet(a)},'Ja, ins Archiv'),h('button',{class:'btn',type:'button',onclick:()=>{delIds.delete('v-'+a.id);render()}},'Abbrechen'))));
+    el.append(h('div',{class:'knoepfe'},
+      h('button',{class:'btn',type:'button',onclick:()=>{termEdit.has(a.id)?termEdit.delete(a.id):termEdit.add(a.id);render()}},editing?'Bearbeitung schließen':'Termin ändern'),
+      h('button',{class:'btn',type:'button',disabled:!fr,onclick:()=>{delIds.add('v-'+a.id);render()}},'Als versendet ins Archiv'),
+      !l.length?(delIds.has('t-'+a.id)?[h('button',{class:'btn danger',type:'button',onclick:()=>termLoeschen(a)},'Wirklich löschen'),h('button',{class:'btn',type:'button',onclick:()=>{delIds.delete('t-'+a.id);render()}},'Abbrechen')]:
+        h('button',{class:'btn danger',type:'button',onclick:()=>{delIds.add('t-'+a.id);render()}},'Löschen')):null));
+    if(!fr)el.append(h('div',{class:'meta'},'Ins Archiv legen geht, sobald mindestens ein Text freigegeben ist.'));
+  }
+  return el;
+}
+function termineView(){
+  const l=aktiv().slice().sort(ausSort),canAct=canWrite!==false;
+  const zuletzt=archiv.slice().sort((x,y)=>(y.versanddatum||'').localeCompare(x.versanddatum||'')).slice(0,5);
+  return h('main',{class:'gutter'},h('section',{class:'links','aria-label':'Versandplan'},
+    h('div',{class:'sec-head'},
+      h('div',{class:'sec-top'},h('h2',{},'Geplante Versandtermine'),h('span',{class:'muted'},l.length+(l.length===1?' Ausgabe':' Ausgaben')+' in Planung')),
+      h('p',{class:'muted',style:'margin:8px 0 0'},'Jede Ausgabe hat einen Versandtermin. Das Dashboard versendet nicht selbst; der Termin dient der Planung. Nach dem Versand die Ausgabe ins Archiv legen.'),
+      canAct?h('div',{class:'chips'},h('button',{class:'btn primary',type:'button',onclick:()=>{termForm=!termForm;render()}},'Versandtermin anlegen')):null),
+    termForm&&canAct?h('div',{class:'formular'},h('h2',{},'Versandtermin anlegen'),terminFelder('term',{}),
+      h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:termAnlegen},'Termin anlegen'),h('button',{class:'btn',type:'button',onclick:()=>{termForm=false;render()}},'Abbrechen'))):null,
+    h('div',{class:'wliste'},
+      !l.length?h('p',{class:'leer'},'Keine Ausgabe in Planung. Lege mit „Versandtermin anlegen“ die nächste an.'):null,
+      l.map(termKarte))),
+    h('section',{class:'rechts'},h('div',{class:'ausgabe'},h('div',{class:'kopf2'},h('h2',{},'Zuletzt versendet'),h('div',{class:'muted'},archiv.length+(archiv.length===1?' Newsletter':' Newsletter')+' im Archiv')),
+      h('div',{class:'inhalt'},!zuletzt.length?h('p',{class:'leer'},'Noch nichts im Archiv.'):null,
+        zuletzt.map(n=>h('div',{class:'pos'},h('div',{class:'zeile'},n.versanddatum?h('span',{class:'pill'},fmtD.format(new Date(n.versanddatum+'T12:00:00'))):null),h('div',{class:'t'},n.name),h('div',{class:'meta'},abschnitteOf(n).length+' Abschnitte'))),
+        h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:()=>{view='archiv';lsSet('nl.view',view);render()}},'Zum Archiv'))))));
+}
+const kpT=()=>{const h0=heuteBerlin(),n=aktiv().filter(a=>a.versanddatum&&a.versanddatum>=h0).sort((x,y)=>x.versanddatum.localeCompare(y.versanddatum))[0];
+  return[[aktiv().length,'Ausgaben in Planung'],[n?fmtD.format(new Date(n.versanddatum+'T12:00:00')):'–','Nächster Versand'],[aktiv().filter(a=>!a.versanddatum).length,'Ohne Termin'],[aktiv().filter(a=>a.versanddatum&&a.versanddatum<h0).length,'Termin überschritten']]};
+const kpA=()=>[[archiv.length,'Newsletter im Archiv'],[archiv.reduce((s,n)=>s+abschnitteOf(n).length,0),'Abschnitte'],[archiv.filter(n=>n.stilvorbild).length,'Stilvorbilder']];
 function render(){
   const a=document.activeElement,id=a&&a.id,pos=a&&a.selectionStart,sc=document.querySelector('.liste'),st=sc?sc.scrollTop:0;
   const app=document.getElementById('app');app.textContent='';
@@ -709,14 +929,14 @@ function render(){
   const chips=[['alle','Alle ('+unz.length+')'],['mail','Mail ('+count(c=>c.typ==='mail')+')'],['document','Datei ('+count(c=>c.typ==='document')+')'],['link','Web ('+count(c=>c.typ==='link')+')'],['note','Notiz ('+count(c=>c.typ==='note')+')'],['beobachtung','Beobachtung ('+count(c=>status(c)==='beobachtung')+')']];
   const shown=unz.filter(c=>filter==='alle'||(filter==='beobachtung'?status(c)==='beobachtung':c.typ===filter)).sort((x,y)=>RANK[status(x)]-RANK[status(y)]||(y.erfasstAm||'').localeCompare(x.erfasstAm||''));
   const ws=wstats(),kpW=[[aeFrei().filter(aeNeu).length,'Neue Änderungen'],[ws.fuermich,'Neu für mich'],[ws.offen,'Offene Wünsche'],[ws.erledigt,'Erledigt'],[ws.bewaehrt,'Bewährt? offen']];
-  const kp=[[echte.filter(c=>!ausgabeId(c)).length,'Im Eingangskorb'],[echte.filter(c=>ausgabeId(c)).length,'Einer Ausgabe zugeordnet'],[echte.filter(c=>c.hinweisText).length,'Themen mit Hinweis'],[items.filter(c=>status(c)==='beobachtung').length,'In Beobachtung']];
+  const kp=[[echte.filter(c=>!ausgabeId(c)).length,'Im Eingangskorb'],[echte.filter(c=>aktiv().some(a=>a.id===ausgabeId(c))).length,'Einer Ausgabe zugeordnet'],[echte.filter(c=>c.hinweisText).length,'Themen mit Hinweis'],[items.filter(c=>status(c)==='beobachtung').length,'In Beobachtung']];
   app.append(
     h('header',{class:'kopf gutter'},h('div',{},h('div',{class:'over'},'Newsletter-Redaktion'),h('h1',{},'Themen sammeln, Ausgaben planen'),h('p',{class:'sub'},'Stand '+dat(new Date().toISOString())+' · Daten aus dem Themenspeicher')),h('img',{src:LOGO_D,alt:'BdKEP'})),
     h('div',{class:'tabs gutter',role:'group','aria-label':'Bereich'},
-      [['eingang','Eingangskorb'],['wuensche','Wünsche'+(ws.fuermich?' ('+ws.fuermich+' neu für dich)':ws.offen?' ('+ws.offen+' offen)':'')]].map(([k,t])=>h('button',{class:'btn'+(view===k?' on':''),type:'button','aria-pressed':String(view===k),onclick:()=>{view=k;lsSet('nl.view',k);render()}},t)),
+      [['eingang','Eingangskorb'],['termine','Versandplan'+(aktiv().length?' ('+aktiv().length+')':'')],['archiv','Archiv'+(archiv.length?' ('+archiv.length+')':'')],['wuensche','Wünsche'+(ws.fuermich?' ('+ws.fuermich+' neu für dich)':ws.offen?' ('+ws.offen+' offen)':'')]].map(([k,t])=>h('button',{class:'btn'+(view===k?' on':''),type:'button','aria-pressed':String(view===k),onclick:()=>{view=k;lsSet('nl.view',k);render()}},t)),
       h('label',{class:'person'},'Ich bin',h('select',{id:'ich-bin','aria-label':'Ich bin',onchange:e=>{me=e.target.value;lsSet('nl.me',me);render()}},h('option',{value:''},'bitte wählen'),PERSONEN.map(n=>h('option',{value:n,selected:n===me},n))))),
-    h('section',{class:'kpis gutter'},(view==='wuensche'?kpW:kp).map(([v,l])=>h('div',{class:'kpi'},h('div',{class:'v'},String(v)),h('div',{class:'l'},l)))),
-    view==='wuensche'?wuenscheView():h('main',{class:'gutter'},
+    h('section',{class:'kpis gutter'},(view==='wuensche'?kpW:view==='termine'?kpT():view==='archiv'?kpA():kp).map(([v,l])=>h('div',{class:'kpi'},h('div',{class:'v'},String(v)),h('div',{class:'l'},l)))),
+    view==='wuensche'?wuenscheView():view==='archiv'?archivView():view==='termine'?termineView():h('main',{class:'gutter'},
       h('section',{class:'links'},
         h('div',{class:'sec-head'},
           h('div',{class:'sec-top'},h('h2',{},'Eingangskorb'),h('span',{class:'muted'},shown.length+(shown.length===1?' Eintrag':' Einträge')+' in dieser Ansicht')),
@@ -729,9 +949,9 @@ function render(){
           loaded&&!shown.length?h('p',{class:'leer'},items.length?'Keine Einträge in dieser Ansicht.':'Der Eingangskorb ist leer. Erfasse eine Quelle oder warte auf den nächsten Mailabruf.'):null,
           shown.map(karte))),
       h('section',{class:'rechts'},
-        ausgaben.map(ausgabePanel),
-        !ausgaben.length&&loaded?h('p',{class:'leer'},'Noch keine Ausgabe angelegt.'):null,
-        canWrite===false?null:newIssue?h('div',{class:'formular',style:'margin:0'},h('label',{class:'feld'},'Name der Ausgabe',h('input',{id:'ausg-name',value:drafts['ausg.name']||'',placeholder:'z. B. Januar 2027',oninput:e=>{drafts['ausg.name']=e.target.value}})),
+        aktiv().map(ausgabePanel),
+        !aktiv().length&&loaded?h('p',{class:'leer'},'Noch keine Ausgabe angelegt.'):null,
+        canWrite===false?null:newIssue?h('div',{class:'formular',style:'margin:0'},terminFelder('ausg',{}),
           h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:neueAusgabe},'Ausgabe anlegen'),h('button',{class:'btn',type:'button',onclick:()=>{newIssue=false;render()}},'Abbrechen'))):
           h('button',{class:'btn',type:'button',style:'align-self:flex-start',onclick:()=>{newIssue=true;render()}},'Ausgabe anlegen'),
         h('p',{class:'hinweis-fuss'},'Die Reihenfolge in einer Ausgabe bestimmt die Reihenfolge im Newsletter. Vorschau und Export als HTML folgen in der nächsten Stufe.'))),
@@ -750,7 +970,8 @@ render();
     db.collection('wuensche').onSnapshot(s=>{wunsch=s.docs.map(d=>({id:d.id,...d.data()}));wLoaded=true;wLoadError='';render()},e=>{wLoaded=true;wLoadError='Die Wünsche können nicht geladen werden ('+(e&&e.code||'Fehler')+').';render()});
     db.collection('aenderungen').onSnapshot(s=>{aend=s.docs.map(d=>({id:d.id,...d.data()}));render()},()=>{});
     db.collection('besuche').onSnapshot(s=>{besuche={};s.docs.forEach(d=>{besuche[d.id]=d.data()});render()},()=>{});
-    db.collection('ausgaben').onSnapshot(s=>{ausgaben=s.docs.map(d=>({id:d.id,...d.data()})).sort((x,y)=>(x.reihenfolge||0)-(y.reihenfolge||0));render()},()=>{});
+    db.collection('ausgaben').onSnapshot(s=>{ausgaben=s.docs.map(d=>({id:d.id,...d.data()})).sort(ausSort);render()},()=>{});
+    db.collection('archiv').onSnapshot(s=>{archiv=s.docs.map(d=>({id:d.id,...d.data()}));aLoaded=true;render()},()=>{aLoaded=true;toast('Archiv nicht ladbar.')});
   }catch(e){loaded=true;render()}
 })();
 </script>

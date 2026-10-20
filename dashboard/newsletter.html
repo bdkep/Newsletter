@@ -273,7 +273,11 @@ function ausgabePanel(a){
   return h('div',{class:'ausgabe'},
     h('div',{class:'kopf2'},h('h2',{},'Ausgabe '+a.name),h('div',{class:'muted'},(a.versanddatum?'Versand '+datTag(a.versanddatum)+(a.versandzeit?', '+a.versandzeit+' Uhr':'')+' · ':'Termin offen · ')+l.length+(l.length===1?' Thema':' Themen')+' · '+warnN+' mit Hinweis · '+l.filter(x=>x.tb&&x.tb.freigegeben).length+' Texte freigegeben')),
     h('div',{class:'inhalt'},
-      l.length?h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:()=>kopieren(a)},'Texte der Ausgabe kopieren')):null,
+      !a.versanddatum?h('div',{class:'warn warn-k'},'Für diese Ausgabe fehlt der Versandtermin.'):null,
+      termEdit.has(a.id)&&canWrite!==false?h('div',{class:'formular',style:'margin:0'},terminFelder(a.id,{name:a.name,datum:a.versanddatum,zeit:a.versandzeit,notiz:a.notiz}),
+        h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>termSpeichern(a)},'Termin speichern'),h('button',{class:'btn',type:'button',onclick:()=>{termEdit.delete(a.id);['name','datum','zeit','notiz'].forEach(k=>delete drafts[a.id+'.'+k]);render()}},'Abbrechen'))):null,
+      h('div',{class:'knoepfe'},canWrite===false||termEdit.has(a.id)?null:h('button',{class:'btn'+(a.versanddatum?'':' primary'),type:'button',onclick:()=>{termEdit.add(a.id);render()}},a.versanddatum?'Termin ändern':'Termin eintragen'),
+        l.length?h('button',{class:'btn',type:'button',onclick:()=>kopieren(a)},'Texte der Ausgabe kopieren'):null),
       !l.length?h('p',{class:'leer'},'Noch keine Themen zugeordnet. Im Eingangskorb „In Ausgabe '+a.name.replace(/\s*\d{4}$/,'')+'“ wählen.'):null,
       l.map((c,i)=>{const s=SRC[c.typ]||SRC.note;return h('div',{class:'pos'},
         h('div',{class:'zeile'},h('span',{class:'nr'},'Position '+(i+1)),h('span',{class:'badge',style:s.s},s.l)),
@@ -715,8 +719,8 @@ const aOpen=new Set(),termEdit=new Set();
 const aktiv=()=>ausgaben.filter(a=>a.status!=='versendet');
 const wochentag=new Intl.DateTimeFormat('de-DE',{weekday:'long',timeZone:'Europe/Berlin'});
 const datTag=s=>{if(!s)return '';const d=new Date(s+'T12:00:00');return isNaN(d)?s:wochentag.format(d)+', '+fmtD.format(d)};
-/* Ausgaben nach Versanddatum absteigend (spätester Termin zuerst), ohne Termin am Ende */
-const ausSort=(x,y)=>(x.versanddatum&&y.versanddatum?y.versanddatum.localeCompare(x.versanddatum)||(y.versandzeit||'').localeCompare(x.versandzeit||''):x.versanddatum?-1:y.versanddatum?1:0)||(x.reihenfolge||0)-(y.reihenfolge||0);
+/* Ausgaben nach Versanddatum aufsteigend (spätester Termin zuletzt), ohne Termin ganz am Ende */
+const ausSort=(x,y)=>(x.versanddatum&&y.versanddatum?x.versanddatum.localeCompare(y.versanddatum)||(x.versandzeit||'').localeCompare(y.versandzeit||''):x.versanddatum?-1:y.versanddatum?1:0)||(x.reihenfolge||0)-(y.reihenfolge||0);
 const abschnitteOf=n=>Array.isArray(n&&n.abschnitte)?n.abschnitte.filter(a=>a&&(a.ueberschrift||a.text)):[];
 const archivText=n=>(n.name||'Newsletter')+(n.versanddatum?' ('+fmtD.format(new Date(n.versanddatum+'T12:00:00'))+')':'')+'\n\n'+(n.einleitung?n.einleitung+'\n\n':'')+abschnitteOf(n).map((a,i)=>(i+1)+'. '+a.ueberschrift+'\n'+a.text).join('\n\n');
 const archivVolltext=n=>[n.name,n.titel,n.einleitung,n.notiz,...abschnitteOf(n).flatMap(a=>[a.ueberschrift,a.text])].filter(Boolean).join('\n');

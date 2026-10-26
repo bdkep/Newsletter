@@ -9,6 +9,16 @@ Erweiterung des bestehenden Mailabrufs („Newsletter: Mail-Abruf in die Inbox (
 - Der Betreff des Newsletters ändert sich mit jedem Versand, es gibt kein festes Muster. Antworten werden über den Betreff-Rest erkannt (siehe Ablauf, Schritt 3).
 - Reply-To im Versandtool steht bisher auf `support@bdkep.de` (Ticketsystem). Auf `aschumann.bdkep+news@gmail.com` umstellen, sonst landen Abwesenheitsnotizen weiter im Ticketsystem.
 
+## Weiterleitung von support@bdkep.de
+
+Der Newsletter geht von `support@bdkep.de` aus, und Antworten gehen dorthin. Eine Weiterleitung von `support@bdkep.de` an `aschumann.bdkep+news@gmail.com` bringt aber **alle** Support-Mails ins Postfach, nicht nur Newsletter-Rückläufer. Deshalb gilt für Mails, die über die Weiterleitung kommen (ursprünglicher Empfänger `support@bdkep.de` in `To`, `X-Original-To` oder `Delivered-To`):
+
+- **Nur Newsletter-Bezug wird übernommen** (Betreff-Rest wie das `betreff` des jüngsten Newsletters im Archiv, oder Zustellfehler zu einem Newsletter-Versand). Alles andere ist Kundenpost des Ticketsystems und wird **weder gespeichert noch einsortiert** (nicht in `emails`, nicht in `quellen`).
+- Die Regel „Re:/AW: in den 14 Tagen nach einem Versand“ und „im Zweifel in `emails`“ gelten für diese Mails **nicht**, sie wären viel zu breit. Eine Antwort mit geändertem Betreff bleibt dann nur im Ticketsystem. Das ist so gewollt.
+- Mails, die direkt an `aschumann.bdkep+news@gmail.com` gehen (nicht über `support@`), werden weiter wie oben beschrieben einsortiert (Quellen und Antworten).
+
+Hinweis zum Ticketsystem: Eine Weiterleitung kopiert nur. `support@bdkep.de` erzeugt weiter Tickets aus den Abwesenheitsnotizen. Damit sie dort entfallen, am Mailserver von `support@` eine Regel einrichten: Mails mit Betreff „Automatische Antwort“, „Abwesenheit“, „Out of Office“, „Auto-Reply“, „Undeliverable“ oder „Delivery Status“ (oder Header `Auto-Submitted` ungleich `no`) an die Gmail-Adresse weiterleiten und nicht ins Ticketsystem zustellen. Sauberer ist Reply-To des Newsletters auf die Gmail-Adresse. Nur gefilterte statt aller Mails weiterzuleiten, ist auch datensparsamer.
+
 ## Ablauf
 
 1. Suche wie bisher (`deliveredto:aschumann.bdkep+news@gmail.com`).

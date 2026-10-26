@@ -35,6 +35,16 @@ Reiter „Wünsche“ neben dem Eingangskorb, Logik wie im Sekretariat-Dashboard
 
 Geplante Aufgabe „Newsletter: Mail-Abruf in die Inbox (23:45)“, täglich 23:45 Uhr Europe/Berlin. Sie liest über den Gmail-Connector Mails an `aschumann.bdkep+news@gmail.com` (nur lesen) und legt sie als `quellen/m-<Gmail-ID>` ab. Doppelte Abrufe sind ausgeschlossen.
 
+## E-Mails: Antworten auf den Newsletter
+
+Reiter „E-Mails“ für die Antworten auf den Newsletter, damit sie nicht im Ticketsystem landen. Das Versandtool bekommt dafür eine eigene Antwortadresse als Reply-To. Eine eigene geplante Aufgabe (Vorgabe: `mailabruf-antworten.md`, nur lesend) stuft jede Mail ein und legt sie als `emails/e-<Gmail-ID>` ab:
+
+- **Abwesenheit mit eindeutigem Rückkehrdatum** (nicht mehr als 180 Tage voraus): schließt sich selbst (`status` `auto`), ohne gespeicherten Mailtext. Sichtbar unter „Automatisch geschlossen“ mit „Wieder öffnen“. Das Dashboard prüft die Einstufung selbst nach: ein `auto` ohne gültiges Datum zeigt es als offen. Über „Älter als 30 Tage löschen“ lassen sie sich bereinigen.
+- **Abwesenheit ohne Datum oder mit Sondertext** (ausgeschieden, Ruhestand, Nachfolger …), **echte Antworten** und **Zustellfehler**: bleiben offen, mit Einstufungsgrund und Mailtext.
+- Aufgabenlogik wie im Aufgaben-Dashboard: an jede E-Mail lassen sich Aufgaben anhängen (Titel, Zuständiger, Frist, Status offen, in Arbeit, wartend, erledigt, verworfen; offen nur ohne, in Arbeit nur mit Zuständigem). „Erledigt“ ist erst möglich, wenn keine Aufgabe mehr offen ist. Wird eine Aufgabe jemand anderem zugewiesen, steht die E-Mail bei ihm unter „Neu für mich“. Historie je E-Mail.
+
+Datenbank-Sammlung `emails`: betreff, absender, datum, text (nur offene), art (`abwesenheit|antwort|zustellfehler`), rueckkehr, grund, status (`auto|offen|erledigt`), ausgabe, erfasstAm, aufgaben, neuFuer, verlauf.
+
 ## Stand
 
 | Stufe | Inhalt | Status |

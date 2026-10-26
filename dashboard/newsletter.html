@@ -320,7 +320,7 @@ const PERSONEN=['Andreas','Moritz'];
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
 let me=PERSONEN.includes(lsGet('nl.me'))?lsGet('nl.me'):'';
-const VIEWS=['eingang','termine','archiv','wuensche'];
+const VIEWS=['eingang','termine','archiv','emails','wuensche'];
 let view=VIEWS.includes(lsGet('nl.view'))?lsGet('nl.view'):'eingang';
 let wunsch=[],wLoaded=false,wLoadError='',wFilter=lsGet('nl.wfilter')||'offen',wq='',wForm=false,wSaving=false;
 const wCard=new Set(),wHist=new Set(),wEdit=new Set(),wBusy=new Set(),wCtl={},wPr={},wPrBusy=new Set(),wPrCtl={};
@@ -353,7 +353,8 @@ const ABLAEUFE="- Eingangskorb: Quellen (Mail, Datei, Web, Notiz) werden von Han
 "- Wünsche: Sammlung `wuensche`. Status `offen`, `ausgearbeitet`, `geprueft` (Einbauprüfung gespeichert), `erledigt`, `geschlossen` (nicht umgesetzt; geschlossene Wünsche zählen bei der Einbauprüfung nicht mit). Ausarbeitung (Story, Kriterien, Erfolgsmaß) bestätigt der Autor. Danach ist \"Einbau prüfen\" der feste nächste Schritt; ein ausgearbeiteter Wunsch wird erst nach gespeicherter Einbauprüfung erledigt. Ändert sich die Ausarbeitung, entfällt die Prüfung. Nach Erledigt beantwortet der Autor \"Bewährt?\". Ein Wunsch wird von einer Person erledigt, nie vom Agenten.\n"+
 "- Versandplan: Sammlung `ausgaben` mit `versanddatum` (JJJJ-MM-TT), `versandzeit` (optional), `notiz`, `status` (`planung`, `versendet`). Jede neue Ausgabe braucht einen Termin (Pflicht beim Anlegen, im Eingangskorb wie im Versandplan). Der Termin lässt sich im Versandplan und direkt in der Ausgabe ändern. Ausgaben stehen nach Termin aufsteigend, der späteste zuletzt, ohne Termin ganz am Ende (nur Bestand von vor der Pflicht). \"Als versendet ins Archiv\" geht nur mit freigegebenen Texten, legt `archiv/v-<Ausgabe-ID>` an und nimmt die Ausgabe aus Planung und Zuordnung. Gelöscht werden nur Ausgaben ohne Themen.\n"+
 "- Archiv: Sammlung `archiv` mit bereits versendeten Newslettern (`name`, `versanddatum`, `abschnitte` mit Überschrift, Text, Link). Zweck: Aufbau, Ausdruck und Grammatik vereinheitlichen, auf ältere Meldungen verweisen, Abschnitte in neue Ausgaben übernehmen. Eine Übernahme legt eine Quelle mit Text im Entwurf an (nie freigegeben, mit Hinweis zur Aktualitätsprüfung). Als Stilvorbild markierte Newsletter gehen mit höchstens 3 Newslettern und 2 Abschnitten je Newsletter als Beispiele in den Claude-Vorschlag (steht in der Sendevorschau).\n"+
-"- Dashboard: Reiter Eingangskorb, Versandplan, Archiv und Wünsche. Anmeldung durch Auswahl der Person (Andreas, Moritz). Schreibrechte hängen an der Stufe \"Contributor\". Gemeinsame Datenbank.\n"+
+"- E-Mails: Sammlung `emails` (`e-<Gmail-ID>`) mit Antworten auf den Newsletter, angelegt von einem eigenen Mailabruf der Antwortadresse (nur lesend, Vorgabe `mailabruf-antworten.md`). `art` `abwesenheit|antwort|zustellfehler`, `status` `auto|offen|erledigt`. Abwesenheit mit eindeutigem Rückkehrdatum (höchstens 180 Tage voraus) wird automatisch geschlossen (kein Mailtext gespeichert), alles andere bleibt offen; das Dashboard prüft `auto` selbst nach. Je E-Mail Aufgaben (Titel, Zuständiger, Frist, Status wie im Aufgaben-Dashboard); Erledigt erst ohne offene Aufgabe; `neuFuer` bei Zuweisung an eine andere Person.\n"+
+"- Dashboard: Reiter Eingangskorb, Versandplan, Archiv, E-Mails und Wünsche. Anmeldung durch Auswahl der Person (Andreas, Moritz). Schreibrechte hängen an der Stufe \"Contributor\". Gemeinsame Datenbank.\n"+
 "- Datenschutz: Mails und Dokumente können vertrauliche oder personenbezogene Inhalte enthalten; keine echten Mails oder Quelltexte im Repo, Tests nur mit Testdaten.";
 const LEITPLANKEN="- Zuerst `README.md`, `newsletter-dashboard-vorgabe.md` und `style.md` lesen, sie sind verbindlich.\n- Auf einem eigenen Branch arbeiten, nicht auf `main`. Keinen Pull Request öffnen und nichts veröffentlichen, bevor die Person es ausdrücklich sagt.\n- Zuerst eine kurze Einbauanalyse schreiben: welche Stellen betroffen sind, was bei bestehenden Daten ohne neue Felder passiert.\n- Nichts erfinden, keine Design-Werte erfinden (`design/` ist maßgeblich). Mails und Quelltexte nicht ins Repo schreiben.\n- Gmail nur lesen. Keine Texte automatisch freigeben, keine Daten ohne Klick an Claude senden.\n- Änderungen klein halten und nur die Dateien anfassen, die der Wunsch braucht.";
 const mutateIn=async(col,id,fn,logText,okMsg)=>{
@@ -362,7 +363,7 @@ const mutateIn=async(col,id,fn,logText,okMsg)=>{
   if(busy)return false;busy=true;
   try{
     const ref=db.doc(col+'/'+id),snap=await ref.get();
-    if(!snap.exists){toast(col==='aenderungen'?'Die Änderung existiert nicht mehr.':'Der Wunsch existiert nicht mehr.');return false}
+    if(!snap.exists){toast(col==='aenderungen'?'Die Änderung existiert nicht mehr.':col==='emails'?'Die E-Mail existiert nicht mehr.':'Der Wunsch existiert nicht mehr.');return false}
     const cur=snap.data(),patch=fn(cur)||{};
     if(newForMe(cur)&&!('neuFuer' in patch))patch.neuFuer='';
     const verlauf=(cur.verlauf||[]).slice(-199);
@@ -956,6 +957,167 @@ function termineView(){
 const kpT=()=>{const h0=heuteBerlin(),n=aktiv().filter(a=>a.versanddatum&&a.versanddatum>=h0).sort((x,y)=>x.versanddatum.localeCompare(y.versanddatum))[0];
   return[[aktiv().length,'Ausgaben in Planung'],[n?fmtD.format(new Date(n.versanddatum+'T12:00:00')):'–','Nächster Versand'],[aktiv().filter(a=>!a.versanddatum).length,'Ohne Termin'],[aktiv().filter(a=>a.versanddatum&&a.versanddatum<h0).length,'Termin überschritten']]};
 const kpA=()=>[[archiv.length,'Newsletter im Archiv'],[archiv.reduce((s,n)=>s+abschnitteOf(n).length,0),'Abschnitte'],[archiv.filter(n=>n.stilvorbild).length,'Stilvorbilder']];
+/* ---- E-Mails: Antworten auf den Newsletter ----
+   Sammlung `emails` (Dokument-ID `e-<Gmail-ID>`), angelegt vom Mailabruf der Antwortadresse (siehe mailabruf-antworten.md):
+   betreff, absender, datum (ISO), text (nur bei offenen Mails), art (abwesenheit | antwort | zustellfehler), rueckkehr (JJJJ-MM-TT, nur Abwesenheit),
+   grund (Begründung der Einstufung), status (auto | offen | erledigt), ausgabe (Name, optional), erfasstAm,
+   aufgaben [{id, titel, zustaendig, faellig, status (offen | in_arbeit | wartend | erledigt | verworfen), angelegtVon, angelegtAm, erledigtVon, erledigtAm}],
+   neuFuer, verlauf, geaendert, geaendertVon.
+   Automatisch geschlossen gilt nur bei status auto, art abwesenheit und gültigem Rückkehrdatum höchstens AUTO_MAX_TAGE Tage voraus.
+   Alles andere zeigt das Dashboard als offen, auch wenn der Abruf "auto" geschrieben hat. */
+const AUTO_MAX_TAGE=180,EM_LIMIT=100,AUFRAEUM_TAGE=30;
+const DATE_ONLY=/^\d{4}-\d{2}-\d{2}$/;
+const tageBis=v=>{if(!DATE_ONLY.test(v||''))return null;const u=k=>{const [y,m,d]=k.split('-').map(Number);return Date.UTC(y,m-1,d)};return Math.round((u(v)-u(heuteBerlin()))/864e5)};
+const ART_EM={abwesenheit:'Abwesenheit',antwort:'Antwort auf den Newsletter',zustellfehler:'Zustellfehler'};
+const artOf=e=>ART_EM[e.art]?e.art:'antwort';
+const emAutoOk=e=>{const t=tageBis(e.rueckkehr);return e.status==='auto'&&e.art==='abwesenheit'&&t!==null&&t<=AUTO_MAX_TAGE};
+const emStatus=e=>e.status==='erledigt'?'erledigt':emAutoOk(e)?'auto':'offen';
+const aufgOf=e=>Array.isArray(e&&e.aufgaben)?e.aufgaben.filter(a=>a&&a.id):[];
+const ASTAT={offen:'offen',in_arbeit:'in Arbeit',wartend:'wartend',erledigt:'erledigt',verworfen:'verworfen'};
+const aAktiv=a=>a.status==='offen'||a.status==='in_arbeit'||a.status==='wartend';
+/* wie bei den Aufgaben: offen nur ohne Zuständigen, in Arbeit nur mit Zuständigem */
+const aStatusOk=(s,zu)=>s==='offen'?!zu:s==='in_arbeit'?!!zu:!!ASTAT[s];
+const aVorbelegt=(zu,s)=>s==='wartend'?'wartend':zu?'in_arbeit':'offen';
+let emails=[],eLoaded=false,eFilter=lsGet('nl.efilter')||'offen',eq='',eMehr=false,eAufraeumen=false;
+const eCard=new Set(),eHist=new Set(),eForm=new Set();
+const em=(e,fn,log,ok)=>mutateIn('emails',e.id,fn,log,typeof ok==='string'?()=>ok:ok);
+const aufgMut=(e,id,fn,log,ok)=>em(e,cur=>{const l=aufgOf(cur);if(!l.some(a=>a.id===id))throw {nutzer:'Die Aufgabe existiert nicht mehr.'};return {aufgaben:l.map(a=>a.id===id?{...a,...fn(a)}:a)}},log,ok);
+const emact={
+  anhaengen:(e,f)=>{
+    const titel=(f.titel||'').trim();
+    if(!titel)return toast('Bitte eintragen, was zu tun ist.');
+    if(titel.length>150)return toast('Der Titel ist zu lang (höchstens 150 Zeichen).');
+    const zu=PERSONEN.includes(f.zustaendig)?f.zustaendig:'',fa=DATE_ONLY.test(f.faellig||'')?f.faellig:'';
+    const a={id:'t-'+Date.now().toString(36)+Math.random().toString(36).slice(2,4),titel,zustaendig:zu,faellig:fa,status:zu?'in_arbeit':'offen',angelegtVon:me,angelegtAm:nowIso()};
+    return em(e,cur=>({aufgaben:[...aufgOf(cur),a].slice(-50),...(cur.status!=='offen'?{status:'offen'}:{}),...(zu&&zu!==me?{neuFuer:zu}:{})}),
+      'Aufgabe angehängt: "'+titel+'"'+(zu?' an '+zu:''),'Aufgabe angehängt.').then(ok=>{if(ok){eForm.delete(e.id);['t','z','f'].forEach(k=>delete drafts[e.id+'.em'+k]);render()}});
+  },
+  azuweisen:(e,a,wer)=>aufgMut(e,a.id,x=>({zustaendig:wer||'',status:aAktiv(x)?aVorbelegt(wer,x.status):x.status}),
+    'Aufgabe "'+a.titel+'": '+(wer?'zugewiesen an '+wer:'Zuweisung entfernt'),'Gespeichert.').then(ok=>{if(ok&&wer&&wer!==me)em(e,()=>({neuFuer:wer}))}),
+  astatus:(e,a,s)=>{
+    if(s===a.status)return;
+    if(!aStatusOk(s,a.zustaendig)){toast(s==='offen'?'Offen gilt nur ohne Zuständigen. Entferne erst die Zuweisung.':'In Arbeit braucht einen Zuständigen. Weise die Aufgabe erst zu.',6000);return}
+    return aufgMut(e,a.id,x=>({status:s,...(s==='erledigt'?{erledigtVon:me,erledigtAm:nowIso()}:x.status==='erledigt'?{erledigtVon:'',erledigtAm:''}:{})}),
+      'Aufgabe "'+a.titel+'": Status '+ASTAT[s]+' (vorher: '+(ASTAT[a.status]||a.status)+')','Status: '+ASTAT[s]+'.');
+  },
+  erledigt:e=>{
+    const n=aufgOf(e).filter(aAktiv).length;
+    if(n)return toast('Erst die '+(n===1?'offene Aufgabe':n+' offenen Aufgaben')+' erledigen oder verwerfen.',6000);
+    return em(e,()=>({status:'erledigt',erledigtVon:me,erledigtAm:nowIso()}),'als erledigt markiert','E-Mail erledigt.');
+  },
+  oeffnen:e=>em(e,()=>({status:'offen',erledigtVon:'',erledigtAm:''}),emStatus(e)==='auto'?'wieder geöffnet (war automatisch geschlossen)':'wieder geöffnet','E-Mail wieder geöffnet.'),
+  gesehen:e=>mutateIn('emails',e.id,()=>({neuFuer:''}),'',()=>'Neu-Kennzeichnung entfernt.')
+};
+async function emAufraeumen(){
+  const grenze=Date.now()-AUFRAEUM_TAGE*864e5,l=emails.filter(e=>emStatus(e)==='auto'&&Date.parse(e.datum||e.erfasstAm||'')<grenze);
+  eAufraeumen=false;
+  if(!l.length)return toast('Nichts zu löschen.');
+  await schreiben(async()=>{for(const e of l)await db.doc('emails/'+e.id).delete()},l.length+' automatisch geschlossene E-Mails gelöscht.');
+}
+function emStats(){
+  const akt=emails.flatMap(e=>aufgOf(e).filter(aAktiv)),off=emails.filter(e=>emStatus(e)==='offen');
+  return {offen:off.length,fuermich:emails.filter(newForMe).length,aufgaben:emails.filter(e=>aufgOf(e).some(aAktiv)).length,aufgN:akt.length,
+    bei:akt.filter(a=>a.zustaendig===me).length,erledigt:emails.filter(e=>emStatus(e)==='erledigt').length,auto:emails.filter(e=>emStatus(e)==='auto').length,
+    fehler:off.filter(e=>artOf(e)==='zustellfehler').length,alle:emails.length};
+}
+const EM_RANG={antwort:0,abwesenheit:1,zustellfehler:2};
+function emSichtbar(){
+  const f={offen:e=>emStatus(e)==='offen',fuermich:newForMe,aufgaben:e=>aufgOf(e).some(aAktiv),erledigt:e=>emStatus(e)==='erledigt',auto:e=>emStatus(e)==='auto',alle:()=>true}[eFilter]||(()=>true);
+  const n=eq.trim().toLowerCase();
+  const stamp=e=>e.datum||e.erfasstAm||'';
+  return emails.filter(f).filter(e=>!n||[e.betreff,e.absender,e.text,e.grund,...aufgOf(e).map(a=>a.titel)].join(' ').toLowerCase().includes(n))
+    .sort((a,b)=>eFilter==='auto'?(a.rueckkehr||'').localeCompare(b.rueckkehr||''):eFilter==='offen'?(EM_RANG[artOf(a)]-EM_RANG[artOf(b)])||stamp(b).localeCompare(stamp(a)):stamp(b).localeCompare(stamp(a)));
+}
+function aufgZeile(e,a,canAct){
+  const t=tageBis(a.faellig),zu=PERSONEN.includes(a.zustaendig)?a.zustaendig:'';
+  const sel=h('select',{id:'ems-'+a.id,'aria-label':'Status der Aufgabe',disabled:!canAct,onchange:ev=>emact.astatus(e,a,ev.target.value)},
+    Object.keys(ASTAT).map(s=>h('option',{value:s,selected:s===a.status,disabled:!aStatusOk(s,zu)&&s!==a.status},ASTAT[s])));
+  const zs=h('select',{id:'emw-'+a.id,'aria-label':'Zuständig',disabled:!canAct,onchange:ev=>emact.azuweisen(e,a,ev.target.value)},
+    h('option',{value:''},'niemand'),PERSONEN.map(n=>h('option',{value:n,selected:n===zu},n)));
+  return h('div',{class:'pos'},
+    h('div',{class:'zeile'},h('span',{class:'t',style:aAktiv(a)?'':'text-decoration:line-through;color:var(--muted)'},a.titel),
+      a.faellig?h('span',{class:'pill '+(aAktiv(a)&&t!==null&&t<0?'bad':'')},'fällig '+(dat(a.faellig+'T12:00:00')||a.faellig)):null),
+    h('div',{class:'raster'},h('label',{class:'feld'},'Status',sel),h('label',{class:'feld'},'Zuständig',zs)),
+    h('p',{class:'meta'},'Angelegt von '+(a.angelegtVon||'unbekannt')+(a.angelegtAm?', '+fmt(a.angelegtAm):'')+(a.erledigtAm?' · erledigt von '+(a.erledigtVon||'')+', '+fmt(a.erledigtAm):'')));
+}
+function aufgForm(e){
+  const k=x=>e.id+'.em'+x;
+  const t=h('input',{id:'emt-'+e.id,type:'text',maxlength:'150','aria-label':'Was ist zu tun?',placeholder:'Was ist zu tun?',oninput:ev=>{drafts[k('t')]=ev.target.value}});t.value=drafts[k('t')]||'';
+  const z=h('select',{id:'emz-'+e.id,'aria-label':'Zuständig',onchange:ev=>{drafts[k('z')]=ev.target.value}},h('option',{value:''},'niemand'),PERSONEN.map(n=>h('option',{value:n,selected:drafts[k('z')]===n},n)));
+  const f=h('input',{id:'emf-'+e.id,type:'date','aria-label':'Fällig am',onchange:ev=>{drafts[k('f')]=ev.target.value}});f.value=drafts[k('f')]||'';
+  return h('div',{class:'formular',style:'margin:0'},
+    h('label',{class:'feld'},'Aufgabe',t),
+    h('div',{class:'raster'},h('label',{class:'feld'},'Zuständig',z),h('label',{class:'feld'},'Fällig am (optional)',f)),
+    h('div',{class:'knoepfe'},
+      h('button',{class:'btn primary',type:'button',onclick:()=>emact.anhaengen(e,{titel:drafts[k('t')],zustaendig:drafts[k('z')],faellig:drafts[k('f')]})},'Aufgabe anhängen'),
+      h('button',{class:'btn',type:'button',onclick:()=>{eForm.delete(e.id);['t','z','f'].forEach(x=>delete drafts[k(x)]);render()}},'Abbrechen')));
+}
+function emAutoZeile(e,canAct){
+  return h('div',{class:'pos'},
+    h('div',{class:'zeile'},h('b',{},e.absender||'unbekannt'),h('span',{class:'pill'},'zurück '+(dat(e.rueckkehr+'T12:00:00')||e.rueckkehr)),
+      h('span',{class:'muted',style:'margin-left:auto'},dat(e.datum||e.erfasstAm,true))),
+    h('p',{class:'meta'},kurz(e.betreff,120)),
+    canAct?h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:()=>emact.oeffnen(e)},'Wieder öffnen')):null);
+}
+function emKarte(e){
+  const canAct=canWrite!==false&&!!me,st=emStatus(e),art=artOf(e),neu=newForMe(e),open=eCard.has(e.id),al=aufgOf(e),akt=al.filter(aAktiv);
+  const flip=()=>{open?eCard.delete(e.id):eCard.add(e.id);render();if(neu&&canAct)emact.gesehen(e)};
+  const verdacht=e.status==='auto'&&st==='offen';
+  const el=h('article',{class:'k'+(neu?' fuer-mich':''),id:'e-'+e.id});
+  el.append(h('div',{class:'zeile'},
+    neu?h('span',{class:'pill neu'},'Neu für dich'):null,
+    h('span',{class:'pill '+(art==='antwort'?'neu':art==='zustellfehler'?'bad':e.rueckkehr?'':'warn')},art==='abwesenheit'&&!e.rueckkehr?'Abwesenheit ohne Datum':ART_EM[art]),
+    e.rueckkehr?h('span',{class:'pill'},'zurück '+(dat(e.rueckkehr+'T12:00:00')||e.rueckkehr)):null,
+    st==='erledigt'?h('span',{class:'pill ok'},'erledigt'):null,
+    akt.length?h('span',{class:'pill warn'},akt.length+(akt.length===1?' offene Aufgabe':' offene Aufgaben')):al.length?h('span',{class:'pill ok'},'Aufgaben erledigt'):null,
+    e.ausgabe?h('span',{class:'pill neutral'},e.ausgabe):null,
+    h('span',{class:'muted',style:'margin-left:auto'},(e.absender||'unbekannt')+' · '+(dat(e.datum||e.erfasstAm,true)||''))));
+  el.append(h('h3',{},e.betreff||'(ohne Betreff)'));
+  if(e.grund)el.append(h('p',{class:'meta'},'Einstufung: '+e.grund));
+  if(verdacht)el.append(h('div',{class:'warn warn-k'},h('b',{},'Bleibt offen:'),' Der Abruf meldete diese Mail als automatisch geschlossen, es fehlt aber ein gültiges Rückkehrdatum, oder es liegt mehr als '+AUTO_MAX_TAGE+' Tage in der Zukunft.'));
+  if(!open){
+    if(e.text)el.append(h('p',{},kurz(e.text,240)));
+    el.append(h('div',{class:'knoepfe'},h('button',{class:'btn','aria-expanded':'false',onclick:flip},'Details und Aufgaben')));
+    return el;
+  }
+  if(e.text)el.append(h('pre',{class:'volltext'},e.text));
+  else el.append(h('p',{class:'leer'},'Der Mailtext ist nicht gespeichert.'));
+  el.append(h('div',{class:'tb'},h('h4',{},'Aufgaben ('+al.length+')'),
+    al.length?al.map(a=>aufgZeile(e,a,canAct)):h('p',{class:'leer'},'Noch keine Aufgabe angehängt.'),
+    canAct?(eForm.has(e.id)?aufgForm(e):h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>{eForm.add(e.id);render()}},'Aufgabe anhängen'))):null));
+  if(canAct)el.append(h('div',{class:'knoepfe'},st==='erledigt'||st==='auto'?h('button',{class:'btn',type:'button',onclick:()=>emact.oeffnen(e)},'Wieder öffnen'):h('button',{class:'btn',type:'button',onclick:()=>emact.erledigt(e)},'Erledigt')));
+  const vl=e.verlauf||[];
+  if(vl.length)el.append(h('details',{class:'tb',open:eHist.has(e.id)?true:null,ontoggle:ev=>{ev.target.open?eHist.add(e.id):eHist.delete(e.id)}},h('summary',{},'Historie ('+vl.length+')'),
+    hist(vl.slice().reverse().map(v=>h('li',{},h('span',{class:'t'},fmt(v.wann)),h('span',{},v.wer+': '+v.text))))));
+  el.append(h('div',{class:'knoepfe'},h('button',{class:'btn','aria-expanded':'true',onclick:flip},'Zuklappen')));
+  return el;
+}
+function emailsView(){
+  const c=emStats(),canAct=canWrite!==false&&!!me;
+  const FL=[['offen','Offen'],['fuermich','Neu für mich'],['aufgaben','Mit offenen Aufgaben'],['erledigt','Erledigt'],['auto','Automatisch geschlossen'],['alle','Alle']];
+  if(!FL.some(([k])=>k===eFilter))eFilter='offen';
+  const list=emSichtbar(),shown=eMehr?list:list.slice(0,EM_LIMIT);
+  const letzter=emails.map(e=>e.erfasstAm||'').sort().pop();
+  const alt=emails.filter(e=>emStatus(e)==='auto'&&Date.parse(e.datum||e.erfasstAm||'')<Date.now()-AUFRAEUM_TAGE*864e5).length;
+  return h('main',{class:'gutter'},h('section',{class:'links'},
+    h('div',{class:'sec-head'},
+      h('div',{class:'sec-top'},h('h2',{},'E-Mails'),h('span',{class:'muted'},list.length+(list.length===1?' E-Mail':' E-Mails')+' in dieser Ansicht')),
+      h('p',{class:'muted',style:'margin:8px 0 0'},'Antworten auf den Newsletter. Abwesenheitsnotizen mit Rückkehrdatum schließen sich selbst, alles andere bleibt offen: Antworten, Abwesenheit ohne Datum oder mit Sondertext (zum Beispiel ausgeschieden) und Zustellfehler. An jede offene E-Mail lassen sich Aufgaben anhängen.'),
+      h('div',{class:'chips',role:'group','aria-label':'Filter E-Mails'},FL.map(([k,t])=>h('button',{class:'btn'+(eFilter===k?' on':''),type:'button','aria-pressed':String(eFilter===k),onclick:()=>{eFilter=k;eMehr=false;lsSet('nl.efilter',k);render()}},t+' ('+c[k]+')'))),
+      h('div',{class:'chips'},h('input',{id:'esuche',type:'search',placeholder:'E-Mails durchsuchen','aria-label':'E-Mails durchsuchen',value:eq,oninput:ev=>{eq=ev.target.value;eMehr=false;render()}})),
+      h('div',{class:'abruf'},h('b',{},'Mailabruf Antworten'),h('span',{},'Eigene Antwortadresse, nur lesend'),h('span',{},'Letzter Abruf: '+(letzter?dat(letzter,true):'noch kein Abruf')))),
+    eFilter==='auto'&&canAct&&alt?h('div',{class:'formular'},
+      eAufraeumen?[h('p',{class:'leer'},alt+' automatisch geschlossene E-Mails sind älter als '+AUFRAEUM_TAGE+' Tage. Sie werden endgültig gelöscht.'),
+        h('div',{class:'knoepfe'},h('button',{class:'btn danger',type:'button',onclick:emAufraeumen},'Endgültig löschen'),h('button',{class:'btn',type:'button',onclick:()=>{eAufraeumen=false;render()}},'Abbrechen'))]
+      :[h('p',{class:'leer'},'Datensparsamkeit: Abwesenheitsnotizen müssen nicht dauerhaft bleiben.'),
+        h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:()=>{eAufraeumen=true;render()}},'Älter als '+AUFRAEUM_TAGE+' Tage löschen ('+alt+')'))]):null,
+    h('div',{class:'wliste'},
+      !eLoaded?h('p',{class:'leer'},'Lade E-Mails …'):null,
+      eLoaded&&!emails.length?h('p',{class:'leer'},'Noch keine E-Mails. Sie erscheinen, sobald der Mailabruf Antworten auf den Newsletter gefunden hat.'):null,
+      eLoaded&&emails.length&&!list.length?h('p',{class:'leer'},eq.trim()?'Zu "'+eq.trim()+'" gibt es keinen Treffer in diesem Filter.':eFilter==='offen'?'Nichts offen. Alle Antworten sind bearbeitet.':'Nichts in dieser Ansicht. Wähle oben einen anderen Filter.'):null,
+      shown.map(e=>eFilter==='auto'?emAutoZeile(e,canAct):emKarte(e)),
+      list.length>shown.length?h('button',{class:'btn',type:'button',style:'align-self:flex-start',onclick:()=>{eMehr=true;render()}},'Weitere '+(list.length-shown.length)+' anzeigen'):null)));
+}
 function render(){
   const a=document.activeElement,id=a&&a.id,pos=a&&a.selectionStart,sc=document.querySelector('.liste'),st=sc?sc.scrollTop:0;
   const app=document.getElementById('app');app.textContent='';
@@ -964,15 +1126,16 @@ function render(){
   const count=fn=>unz.filter(fn).length;
   const chips=[['alle','Alle ('+unz.length+')'],['mail','Mail ('+count(c=>c.typ==='mail')+')'],['document','Datei ('+count(c=>c.typ==='document')+')'],['link','Web ('+count(c=>c.typ==='link')+')'],['note','Notiz ('+count(c=>c.typ==='note')+')'],['beobachtung','Beobachtung ('+count(c=>status(c)==='beobachtung')+')']];
   const shown=unz.filter(c=>filter==='alle'||(filter==='beobachtung'?status(c)==='beobachtung':c.typ===filter)).sort((x,y)=>RANK[status(x)]-RANK[status(y)]||(y.erfasstAm||'').localeCompare(x.erfasstAm||''));
+  const es=emStats(),kpE=[[es.offen,'Offene E-Mails'],[es.aufgN,'Offene Aufgaben'],[es.bei,'Davon bei mir'],[es.auto,'Automatisch geschlossen']];
   const ws=wstats(),kpW=[[aeFrei().filter(aeNeu).length,'Neue Änderungen'],[ws.fuermich,'Neu für mich'],[ws.offen,'Offene Wünsche'],[ws.erledigt,'Erledigt'],[ws.bewaehrt,'Bewährt? offen']];
   const kp=[[echte.filter(c=>!ausgabeId(c)).length,'Im Eingangskorb'],[echte.filter(c=>aktiv().some(a=>a.id===ausgabeId(c))).length,'Einer Ausgabe zugeordnet'],[echte.filter(c=>c.hinweisText).length,'Themen mit Hinweis'],[items.filter(c=>status(c)==='beobachtung').length,'In Beobachtung']];
   app.append(
     h('header',{class:'kopf gutter'},h('div',{},h('div',{class:'over'},'Newsletter-Redaktion'),h('h1',{},'Themen sammeln, Ausgaben planen'),h('p',{class:'sub'},'Stand '+dat(new Date().toISOString())+' · Daten aus dem Themenspeicher')),h('img',{src:LOGO_D,alt:'BdKEP'})),
     h('div',{class:'tabs gutter',role:'group','aria-label':'Bereich'},
-      [['eingang','Eingangskorb'],['termine','Versandplan'+(aktiv().length?' ('+aktiv().length+')':'')],['archiv','Archiv'+(archiv.length?' ('+archiv.length+')':'')],['wuensche','Wünsche'+(ws.fuermich?' ('+ws.fuermich+' neu für dich)':ws.offen?' ('+ws.offen+' offen)':'')]].map(([k,t])=>h('button',{class:'btn'+(view===k?' on':''),type:'button','aria-pressed':String(view===k),onclick:()=>{view=k;lsSet('nl.view',k);render()}},t)),
+      [['eingang','Eingangskorb'],['termine','Versandplan'+(aktiv().length?' ('+aktiv().length+')':'')],['archiv','Archiv'+(archiv.length?' ('+archiv.length+')':'')],['emails','E-Mails'+(es.fuermich?' ('+es.fuermich+' neu für dich)':es.offen?' ('+es.offen+' offen)':'')],['wuensche','Wünsche'+(ws.fuermich?' ('+ws.fuermich+' neu für dich)':ws.offen?' ('+ws.offen+' offen)':'')]].map(([k,t])=>h('button',{class:'btn'+(view===k?' on':''),type:'button','aria-pressed':String(view===k),onclick:()=>{view=k;lsSet('nl.view',k);render()}},t)),
       h('label',{class:'person'},'Ich bin',h('select',{id:'ich-bin','aria-label':'Ich bin',onchange:e=>{me=e.target.value;lsSet('nl.me',me);render()}},h('option',{value:''},'bitte wählen'),PERSONEN.map(n=>h('option',{value:n,selected:n===me},n))))),
-    h('section',{class:'kpis gutter'},(view==='wuensche'?kpW:view==='termine'?kpT():view==='archiv'?kpA():kp).map(([v,l])=>h('div',{class:'kpi'},h('div',{class:'v'},String(v)),h('div',{class:'l'},l)))),
-    view==='wuensche'?wuenscheView():view==='archiv'?archivView():view==='termine'?termineView():h('main',{class:'gutter'},
+    h('section',{class:'kpis gutter'},(view==='emails'?kpE:view==='wuensche'?kpW:view==='termine'?kpT():view==='archiv'?kpA():kp).map(([v,l])=>h('div',{class:'kpi'},h('div',{class:'v'},String(v)),h('div',{class:'l'},l)))),
+    view==='emails'?emailsView():view==='wuensche'?wuenscheView():view==='archiv'?archivView():view==='termine'?termineView():h('main',{class:'gutter'},
       h('section',{class:'links'},
         h('div',{class:'sec-head'},
           h('div',{class:'sec-top'},h('h2',{},'Eingangskorb'),h('span',{class:'muted'},shown.length+(shown.length===1?' Eintrag':' Einträge')+' in dieser Ansicht')),
@@ -1008,6 +1171,7 @@ render();
     db.collection('aenderungen').onSnapshot(s=>{aend=s.docs.map(d=>({id:d.id,...d.data()}));render()},()=>{});
     db.collection('besuche').onSnapshot(s=>{besuche={};s.docs.forEach(d=>{besuche[d.id]=d.data()});render()},()=>{});
     db.collection('ausgaben').onSnapshot(s=>{ausgaben=s.docs.map(d=>({id:d.id,...d.data()})).sort(ausSort);render()},()=>{});
+    db.collection('emails').onSnapshot(s=>{emails=s.docs.map(d=>({id:d.id,...d.data()}));eLoaded=true;render()},()=>{eLoaded=true;toast('E-Mails nicht ladbar.')});
     db.collection('archiv').onSnapshot(s=>{archiv=s.docs.map(d=>({id:d.id,...d.data()}));aLoaded=true;render()},()=>{aLoaded=true;toast('Archiv nicht ladbar.')});
   }catch(e){loaded=true;render()}
 })();

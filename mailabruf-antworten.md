@@ -6,14 +6,19 @@ Erweiterung des bestehenden Mailabrufs („Newsletter: Mail-Abruf in die Inbox (
 
 - Im Versandtool ist Reply-To bereits die Adresse `aschumann.bdkep+news@gmail.com` (oder wird darauf gesetzt). Mit einem Testversand prüfen, wohin Abwesenheitsnotizen tatsächlich gehen (je nach Mailserver Reply-To, Return-Path oder From).
 - Gmail wird nur gelesen: nichts senden, löschen, verschieben, labeln oder als gelesen markieren. Auch Antworten werden nie versendet; Antwortentwürfe entstehen nur als Text im Dashboard.
-- **Betreff-Muster des Newsletters** festlegen (Platzhalter `<Betreff-Muster>`, zum Beispiel der feste Teil des Betreffs). Es dient dazu, Antworten auf den Newsletter von weitergeleiteten Quellen zu unterscheiden.
+- Der Betreff des Newsletters ändert sich mit jedem Versand, es gibt kein festes Muster. Antworten werden über den Betreff-Rest erkannt (siehe Ablauf, Schritt 3).
+- Reply-To im Versandtool steht bisher auf `support@bdkep.de` (Ticketsystem). Auf `aschumann.bdkep+news@gmail.com` umstellen, sonst landen Abwesenheitsnotizen weiter im Ticketsystem.
 
 ## Ablauf
 
 1. Suche wie bisher (`deliveredto:aschumann.bdkep+news@gmail.com`).
 2. Je Mail zuerst prüfen, ob das Dokument schon existiert (`quellen/m-<ID>` oder `emails/e-<ID>`), dann überspringen. Vorhandene Dokumente nie überschreiben, dort stehen Aufgaben und Status.
 3. Mail einsortieren:
-   - **in `emails`**: Zustellfehler, Abwesenheitsnotizen und automatische Antworten (Header, Absender oder Betreff siehe unten), außerdem Mails, deren Betreff mit „Re:“, „AW:“ oder „Antwort:“ beginnt und das `<Betreff-Muster>` enthält. Im Zweifel ebenfalls in `emails`, damit keine Antwort im Eingangskorb der Themen untergeht.
+   - **in `emails`**: Zustellfehler, Abwesenheitsnotizen und automatische Antworten (Header, Absender oder Betreff siehe unten). Außerdem Mails, die auf den Newsletter antworten:
+     - Betreff-Rest bilden: Präfixe wie „Automatische Antwort:“, „Out of Office:“, „Abwesenheit:“, „Re:“, „AW:“, „Antwort:“, „WG:“ (auch mehrfach, auch englisch) vorn abschneiden, Groß- und Kleinschreibung und Leerzeichen ignorieren.
+     - Ein Betreff-Rest, der bei Abwesenheitsnotizen oder Zustellfehlern der letzten 14 Tage am häufigsten vorkommt (bei 100 bis 200 Rückläufern je Versand eindeutig), ist der Betreff des Newsletters. Jede Mail mit diesem Betreff-Rest gehört in `emails`, auch eine persönliche Antwort mit „Re:“.
+     - Zusätzlich: Mails mit „Re:“, „AW:“ oder „Antwort:“ im Betreff, die innerhalb von 14 Tagen nach einem Versandtermin (`ausgaben`, `versanddatum`) eingehen, gehören in `emails`.
+     - Im Zweifel ebenfalls in `emails`, damit keine Antwort im Eingangskorb der Themen untergeht.
    - **in `quellen`**: alles andere (weitergeleitete Meldungen, Hinweise, Links), unverändert wie bisher.
 4. Ist die Mail einer Ausgabe zuzuordnen (jüngster Versandtermin in `ausgaben` vor dem Maildatum), deren Namen in `ausgabe` eintragen.
 5. Der Zeitraum der Suche muss mindestens 14 Tage zurückreichen, damit ein ausgefallener Lauf nachgeholt wird. Das Dashboard löscht automatisch geschlossene Mails frühestens nach 30 Tagen, sie werden also nie erneut angelegt.
@@ -28,8 +33,10 @@ Erweiterung des bestehenden Mailabrufs („Newsletter: Mail-Abruf in die Inbox (
 
 Abwesenheit, Entscheidung über `status`:
 
-- **`auto`** nur, wenn alle drei Punkte gelten: Es ist eine Abwesenheitsnotiz, im Text steht ein eindeutiges Rückkehrdatum (alle Schreibweisen, auch „bis Montag, den 3. November“, „back on Nov 3rd“; ohne Jahr gilt das nächste passende Datum), und im Text steht nichts Besonderes.
-- **`offen`**, wenn eines gilt: kein Rückkehrdatum, Datum nicht eindeutig, Rückkehr mehr als 180 Tage in der Zukunft, oder ein Sondertext wie „nicht mehr im Unternehmen“, „ausgeschieden“, „im Ruhestand“, „Mail wird nicht weitergeleitet“, „Nachfolger“, „bitte wenden Sie sich an …“, „Elternzeit“ ohne Ende, eine persönliche Nachricht zusätzlich zur Abwesenheit.
+- **`auto`** nur, wenn alle drei Punkte gelten: Es ist eine Abwesenheitsnotiz, im Text steht ein eindeutiges Rückkehrdatum (alle Schreibweisen, auch „bis Montag, den 3. November“, „back on Nov 3rd“; ohne Jahr gilt das nächste passende Datum), und im Text steht nichts Besonderes. Als Rückkehrdatum gilt der erste Tag, an dem die Person wieder da ist. Steht dort „ab 26.10.2026 wieder erreichbar“, ist es der 26.10.2026; steht nur „bis 25.10. im Urlaub“, ist es der 26.10. Zweisprachige Texte sind normal, nur ein Datum muss sich eindeutig ergeben. Ein Hinweis auf eine Vertretung (Name, Adresse, Telefon, „wenden Sie sich an …“) ist **kein** Sondertext, solange ein Rückkehrdatum dabei steht.
+- **`offen`**, wenn eines gilt: kein Rückkehrdatum, Datum nicht eindeutig, Rückkehr mehr als 180 Tage in der Zukunft, oder ein Sondertext wie „nicht mehr im Unternehmen“, „ausgeschieden“, „im Ruhestand“, „Mail wird nicht weitergeleitet“, „Nachfolger“, „Elternzeit“ ohne Ende, ein Hinweis auf eine dauerhaft zuständige andere Person ohne Rückkehrdatum, eine persönliche Nachricht zusätzlich zur Abwesenheit.
+
+Beispiel (Abwesenheit, wird `auto`): Betreff „Automatische Antwort: <Newsletter-Betreff>“, Text „ich befinde mich bis 25.10. im Urlaub … Meine Vertretung ist … Ab 26.10.2026 stehe ich wieder zur Verfügung“, dazu ein englischer Absatz „currently not available, please contact your project manager“. Ergebnis: `art` `abwesenheit`, `rueckkehr` `2026-10-26`, `status` `auto`.
 - Im Zweifel `offen`. Das Dashboard prüft zusätzlich selbst: Ein `auto` ohne gültiges `rueckkehr` oder mit Rückkehr nach mehr als 180 Tagen zeigt es als offen.
 
 ## Felder in `emails/e-<Gmail-Nachrichten-ID>`

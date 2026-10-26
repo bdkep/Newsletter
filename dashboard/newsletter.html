@@ -353,7 +353,7 @@ const ABLAEUFE="- Eingangskorb: Quellen (Mail, Datei, Web, Notiz) werden von Han
 "- Wünsche: Sammlung `wuensche`. Status `offen`, `ausgearbeitet`, `geprueft` (Einbauprüfung gespeichert), `erledigt`, `geschlossen` (nicht umgesetzt; geschlossene Wünsche zählen bei der Einbauprüfung nicht mit). Ausarbeitung (Story, Kriterien, Erfolgsmaß) bestätigt der Autor. Danach ist \"Einbau prüfen\" der feste nächste Schritt; ein ausgearbeiteter Wunsch wird erst nach gespeicherter Einbauprüfung erledigt. Ändert sich die Ausarbeitung, entfällt die Prüfung. Nach Erledigt beantwortet der Autor \"Bewährt?\". Ein Wunsch wird von einer Person erledigt, nie vom Agenten.\n"+
 "- Versandplan: Sammlung `ausgaben` mit `versanddatum` (JJJJ-MM-TT), `versandzeit` (optional), `notiz`, `status` (`planung`, `versendet`). Jede neue Ausgabe braucht einen Termin (Pflicht beim Anlegen, im Eingangskorb wie im Versandplan). Der Termin lässt sich im Versandplan und direkt in der Ausgabe ändern. Ausgaben stehen nach Termin aufsteigend, der späteste zuletzt, ohne Termin ganz am Ende (nur Bestand von vor der Pflicht). \"Als versendet ins Archiv\" geht nur mit freigegebenen Texten, legt `archiv/v-<Ausgabe-ID>` an und nimmt die Ausgabe aus Planung und Zuordnung. Gelöscht werden nur Ausgaben ohne Themen.\n"+
 "- Archiv: Sammlung `archiv` mit bereits versendeten Newslettern (`name`, `versanddatum`, `abschnitte` mit Überschrift, Text, Link). Zweck: Aufbau, Ausdruck und Grammatik vereinheitlichen, auf ältere Meldungen verweisen, Abschnitte in neue Ausgaben übernehmen. Eine Übernahme legt eine Quelle mit Text im Entwurf an (nie freigegeben, mit Hinweis zur Aktualitätsprüfung). Als Stilvorbild markierte Newsletter gehen mit höchstens 3 Newslettern und 2 Abschnitten je Newsletter als Beispiele in den Claude-Vorschlag (steht in der Sendevorschau).\n"+
-"- E-Mails: Sammlung `emails` (`e-<Gmail-ID>`) mit Antworten auf den Newsletter, angelegt von einem eigenen Mailabruf der Antwortadresse (nur lesend, Vorgabe `mailabruf-antworten.md`). `art` `abwesenheit|antwort|zustellfehler`, `status` `auto|offen|erledigt`. Abwesenheit mit eindeutigem Rückkehrdatum (höchstens 180 Tage voraus) wird automatisch geschlossen (kein Mailtext gespeichert), alles andere bleibt offen; das Dashboard prüft `auto` selbst nach. Je E-Mail Aufgaben (Titel, Zuständiger, Frist, Status wie im Aufgaben-Dashboard); Erledigt erst ohne offene Aufgabe; `neuFuer` bei Zuweisung an eine andere Person.\n"+
+"- E-Mails: Sammlung `emails` (`e-<Gmail-ID>`) mit Antworten auf den Newsletter, angelegt vom Mailabruf der Adresse `aschumann.bdkep+news@gmail.com` (nur lesend, Vorgabe `mailabruf-antworten.md`; derselbe Abruf wie der der Quellen, er sortiert nur zusätzlich). `art` `abwesenheit|antwort|zustellfehler`, `status` `auto|offen|erledigt`. Abwesenheit mit eindeutigem Rückkehrdatum (höchstens 180 Tage voraus) wird automatisch geschlossen (kein Mailtext gespeichert), alles andere bleibt offen; das Dashboard prüft `auto` selbst nach. Je offener Antwort ein Antwortentwurf nur als Text (`antwortEntwurf`, nie versendet, Betreff und Mailtext gehen erst nach \"Jetzt senden\" an Claude). Je E-Mail Aufgaben (Titel, Zuständiger, Frist, Status wie im Aufgaben-Dashboard); Erledigt erst ohne offene Aufgabe; `neuFuer` bei Zuweisung an eine andere Person.\n"+
 "- Dashboard: Reiter Eingangskorb, Versandplan, Archiv, E-Mails und Wünsche. Anmeldung durch Auswahl der Person (Andreas, Moritz). Schreibrechte hängen an der Stufe \"Contributor\". Gemeinsame Datenbank.\n"+
 "- Datenschutz: Mails und Dokumente können vertrauliche oder personenbezogene Inhalte enthalten; keine echten Mails oder Quelltexte im Repo, Tests nur mit Testdaten.";
 const LEITPLANKEN="- Zuerst `README.md`, `newsletter-dashboard-vorgabe.md` und `style.md` lesen, sie sind verbindlich.\n- Auf einem eigenen Branch arbeiten, nicht auf `main`. Keinen Pull Request öffnen und nichts veröffentlichen, bevor die Person es ausdrücklich sagt.\n- Zuerst eine kurze Einbauanalyse schreiben: welche Stellen betroffen sind, was bei bestehenden Daten ohne neue Felder passiert.\n- Nichts erfinden, keine Design-Werte erfinden (`design/` ist maßgeblich). Mails und Quelltexte nicht ins Repo schreiben.\n- Gmail nur lesen. Keine Texte automatisch freigeben, keine Daten ohne Klick an Claude senden.\n- Änderungen klein halten und nur die Dateien anfassen, die der Wunsch braucht.";
@@ -1008,6 +1008,30 @@ const emact={
   oeffnen:e=>em(e,()=>({status:'offen',erledigtVon:'',erledigtAm:''}),emStatus(e)==='auto'?'wieder geöffnet (war automatisch geschlossen)':'wieder geöffnet','E-Mail wieder geöffnet.'),
   gesehen:e=>mutateIn('emails',e.id,()=>({neuFuer:''}),'',()=>'Neu-Kennzeichnung entfernt.')
 };
+/* Antwortentwurf: nur als Text, wird nie versendet. Gesendet an Claude werden Betreff und Mailtext, ohne Absenderadresse; erst nach "Jetzt senden". */
+const eSend=new Set(),eGen=new Set();
+async function emEntwurf(e){
+  eSend.delete(e.id);
+  if(!sample)return toast('Die Texterzeugung ist in dieser Ansicht nicht verfügbar. Der Antwortentwurf lässt sich von Hand schreiben.');
+  eGen.add(e.id);render();
+  try{
+    const r=await sample(STIL_ANTWORT+'\n\n--- E-Mail ---\nBetreff: '+(e.betreff||'')+'\nText:\n'+String(e.text||'(kein Text gespeichert)').slice(0,3000)+(e.hinweis?'\nHinweis des Redakteurs: '+e.hinweis:''),{cache:false,modelTier:'default'});
+    const t=String((r&&r.text)||'').trim();
+    if(!t)throw {code:'leer'};
+    drafts[e.id+'.ema']=t;eCard.add(e.id);toast('Entwurf liegt vor. Bitte prüfen, anpassen und speichern. Es wird nichts versendet.',6000);
+  }catch(x){sampleAus(x&&x.code);toast(x&&x.code==='not_granted'?'Die Texterzeugung wurde nicht erlaubt.':'Kein Entwurf erhalten. Bitte erneut versuchen oder von Hand schreiben.')}
+  finally{eGen.delete(e.id);render()}
+}
+const STIL_ANTWORT=`Du entwirfst die Antwort auf eine E-Mail, die als Reaktion auf den Newsletter des Bundesverbands der Kurier-Express-Post-Dienste (BdKEP) eingegangen ist. Deutsch, höflich, sachlich, kurz (höchstens 120 Wörter), Anrede passend zum Ton der Mail, Gruß "Mit freundlichen Grüßen" ohne Namen.
+Regeln: keine Werbesprache, keine rhetorischen Fragen, keine typischen KI-Formulierungen. Sage nichts zu, was aus der Mail nicht hervorgeht (keine Termine, Preise, Zusagen); wo eine Angabe fehlt, schreibe [Angabe fehlt]. Ist die Mail eine Abmeldung, bestätige sie und nenne, dass die Adresse aus dem Verteiler genommen wird. Ist sie eine Frage, beantworte nur, was sicher ist, und biete Rückmeldung an.
+Antworte nur mit dem Text der Antwort, ohne Betreffzeile und ohne Erläuterung.`;
+async function emEntwurfSpeichern(e,t){
+  t=String(t||'').trim();
+  if(!t)return toast('Bitte einen Text eintragen.');
+  const ok=await em(e,()=>({antwortEntwurf:{text:t,von:me,am:nowIso()}}),'Antwortentwurf gespeichert (nicht versendet)','Entwurf gespeichert. Er wird nicht versendet.');
+  if(ok){delete drafts[e.id+'.ema'];render()}
+}
+async function emKopieren(t){try{await navigator.clipboard.writeText(t);toast('Entwurf kopiert.')}catch(x){toast('Kopieren nicht möglich. Bitte im Browser erlauben.')}}
 async function emAufraeumen(){
   const grenze=Date.now()-AUFRAEUM_TAGE*864e5,l=emails.filter(e=>emStatus(e)==='auto'&&Date.parse(e.datum||e.erfasstAm||'')<grenze);
   eAufraeumen=false;
@@ -1059,6 +1083,30 @@ function emAutoZeile(e,canAct){
     h('p',{class:'meta'},kurz(e.betreff,120)),
     canAct?h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:()=>emact.oeffnen(e)},'Wieder öffnen')):null);
 }
+function emAntwortBox(e,canAct,st){
+  const ent=e.antwortEntwurf&&e.antwortEntwurf.text?e.antwortEntwurf:null,dk=e.id+'.ema',bearb=dk in drafts,busyG=eGen.has(e.id);
+  if(artOf(e)!=='antwort'&&!ent&&!bearb)return null;
+  const box=h('div',{class:'tb'},h('h4',{},'Antwortentwurf'),h('p',{class:'leer'},'Nur ein Textentwurf zum Kopieren in dein Mailprogramm. Das Dashboard versendet nichts.'));
+  if(busyG)return (box.append(h('p',{class:'leer',role:'status'},'Claude schreibt den Entwurf …')),box);
+  if(bearb){
+    const ta=h('textarea',{id:'ema-'+e.id,'aria-label':'Antwortentwurf',oninput:ev=>{drafts[dk]=ev.target.value},style:'min-height:160px'});ta.value=drafts[dk]||'';
+    box.append(ta,h('div',{class:'knoepfe'},
+      h('button',{class:'btn primary',type:'button',onclick:()=>emEntwurfSpeichern(e,drafts[dk])},'Entwurf speichern'),
+      h('button',{class:'btn',type:'button',onclick:()=>emKopieren(drafts[dk]||'')},'Text kopieren'),
+      h('button',{class:'btn',type:'button',onclick:()=>{delete drafts[dk];render()}},'Verwerfen')));
+    return box;
+  }
+  if(ent)box.append(h('pre',{class:'volltext'},ent.text),h('p',{class:'meta'},'Entwurf von '+(ent.von||'unbekannt')+', '+fmt(ent.am)));
+  if(canAct&&st==='offen'){
+    if(eSend.has(e.id))box.append(h('div',{class:'senden'},h('b',{},'An Claude gesendet werden:'),h('ul',{},h('li',{},'Betreff der Mail'),h('li',{},'Text der Mail (höchstens 3000 Zeichen)')),h('p',{style:'margin:0'},'Nicht gesendet werden Absenderadresse und Name. Der Entwurf wird nicht versendet und erst nach deiner Bestätigung gespeichert.'),
+      h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>emEntwurf(e)},'Jetzt senden'),h('button',{class:'btn',type:'button',onclick:()=>{eSend.delete(e.id);render()}},'Abbrechen'))));
+    else box.append(h('div',{class:'knoepfe'},
+      sample?h('button',{class:'btn primary',type:'button',onclick:()=>{eSend.add(e.id);render()}},ent?'Neu entwerfen':'Antwort entwerfen'):null,
+      h('button',{class:'btn',type:'button',onclick:()=>{drafts[dk]=ent?ent.text:'';render()}},ent?'Entwurf bearbeiten':'Von Hand schreiben'),
+      ent?h('button',{class:'btn',type:'button',onclick:()=>emKopieren(ent.text)},'Text kopieren'):null));
+  }else if(ent)box.append(h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:()=>emKopieren(ent.text)},'Text kopieren')));
+  return box;
+}
 function emKarte(e){
   const canAct=canWrite!==false&&!!me,st=emStatus(e),art=artOf(e),neu=newForMe(e),open=eCard.has(e.id),al=aufgOf(e),akt=al.filter(aAktiv);
   const flip=()=>{open?eCard.delete(e.id):eCard.add(e.id);render();if(neu&&canAct)emact.gesehen(e)};
@@ -1082,6 +1130,7 @@ function emKarte(e){
   }
   if(e.text)el.append(h('pre',{class:'volltext'},e.text));
   else el.append(h('p',{class:'leer'},'Der Mailtext ist nicht gespeichert.'));
+  el.append(emAntwortBox(e,canAct,st));
   el.append(h('div',{class:'tb'},h('h4',{},'Aufgaben ('+al.length+')'),
     al.length?al.map(a=>aufgZeile(e,a,canAct)):h('p',{class:'leer'},'Noch keine Aufgabe angehängt.'),
     canAct?(eForm.has(e.id)?aufgForm(e):h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>{eForm.add(e.id);render()}},'Aufgabe anhängen'))):null));
@@ -1105,7 +1154,7 @@ function emailsView(){
       h('p',{class:'muted',style:'margin:8px 0 0'},'Antworten auf den Newsletter. Abwesenheitsnotizen mit Rückkehrdatum schließen sich selbst, alles andere bleibt offen: Antworten, Abwesenheit ohne Datum oder mit Sondertext (zum Beispiel ausgeschieden) und Zustellfehler. An jede offene E-Mail lassen sich Aufgaben anhängen.'),
       h('div',{class:'chips',role:'group','aria-label':'Filter E-Mails'},FL.map(([k,t])=>h('button',{class:'btn'+(eFilter===k?' on':''),type:'button','aria-pressed':String(eFilter===k),onclick:()=>{eFilter=k;eMehr=false;lsSet('nl.efilter',k);render()}},t+' ('+c[k]+')'))),
       h('div',{class:'chips'},h('input',{id:'esuche',type:'search',placeholder:'E-Mails durchsuchen','aria-label':'E-Mails durchsuchen',value:eq,oninput:ev=>{eq=ev.target.value;eMehr=false;render()}})),
-      h('div',{class:'abruf'},h('b',{},'Mailabruf Antworten'),h('span',{},'Eigene Antwortadresse, nur lesend'),h('span',{},'Letzter Abruf: '+(letzter?dat(letzter,true):'noch kein Abruf')))),
+      h('div',{class:'abruf'},h('b',{},'Mailabruf Antworten'),h('span',{},'Postfach aschumann.bdkep+news@gmail.com, nur lesend, täglich um 23:45 Uhr'),h('span',{},'Letzter Abruf: '+(letzter?dat(letzter,true):'noch kein Abruf')))),
     eFilter==='auto'&&canAct&&alt?h('div',{class:'formular'},
       eAufraeumen?[h('p',{class:'leer'},alt+' automatisch geschlossene E-Mails sind älter als '+AUFRAEUM_TAGE+' Tage. Sie werden endgültig gelöscht.'),
         h('div',{class:'knoepfe'},h('button',{class:'btn danger',type:'button',onclick:emAufraeumen},'Endgültig löschen'),h('button',{class:'btn',type:'button',onclick:()=>{eAufraeumen=false;render()}},'Abbrechen'))]

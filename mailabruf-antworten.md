@@ -27,7 +27,7 @@ Erweiterung des bestehenden Mailabrufs („Newsletter: Mail-Abruf in die Inbox (
 
 Geht der Newsletter automatisch auch an `aschumann.bdkep+news@gmail.com` (Adresse als Empfänger im Versandtool eintragen), liegt eine Kopie im Postfach. Der Abruf legt sie im Archiv ab und kennt damit den echten Betreff.
 
-- **Erkennen:** Absender ist die Absenderadresse des Newsletters (Platzhalter `<Absenderadresse des Newsletters>`, bitte festlegen) und die Mail ist kein Auto-Reply (kein `Auto-Submitted`, kein „Automatische Antwort“ im Betreff). Diese Mail ist weder Quelle noch Antwort.
+- **Erkennen:** Absender ist die Absenderadresse des Newsletters (nach den Beispiel-Antworten vermutlich `"BdKEP Neuigkeiten" <support@bdkep.de>`; bitte bestätigen) und die Mail ist kein Auto-Reply (kein `Auto-Submitted`, kein „Automatische Antwort“ im Betreff). Diese Mail ist weder Quelle noch Antwort.
 - **Ablegen:** Dokument in `archiv`, Felder: `name` (Betreff), `betreff` (Original), `gmailId`, `versanddatum` (Datum der Mail, `JJJJ-MM-TT`), `abschnitte` (je `h2` ein Abschnitt, wie beim HTML-Import: ueberschrift, text, linkText, url), `einleitung`, `abbinder`, `stilvorbild` `false`, `quelle` `mail`, `erfasstAm`.
 - **Keine Doppelten, in dieser Reihenfolge prüfen, beim ersten Treffer nichts neu anlegen:**
   1. Es gibt in `archiv` schon ein Dokument mit derselben `gmailId`.
@@ -48,10 +48,12 @@ Geht der Newsletter automatisch auch an `aschumann.bdkep+news@gmail.com` (Adress
 
 Abwesenheit, Entscheidung über `status`:
 
-- **`auto`** nur, wenn alle drei Punkte gelten: Es ist eine Abwesenheitsnotiz, im Text steht ein eindeutiges Rückkehrdatum (alle Schreibweisen, auch „bis Montag, den 3. November“, „back on Nov 3rd“; ohne Jahr gilt das nächste passende Datum), und im Text steht nichts Besonderes. Als Rückkehrdatum gilt der erste Tag, an dem die Person wieder da ist. Steht dort „ab 26.10.2026 wieder erreichbar“, ist es der 26.10.2026; steht nur „bis 25.10. im Urlaub“, ist es der 26.10. Zweisprachige Texte sind normal, nur ein Datum muss sich eindeutig ergeben. Ein Hinweis auf eine Vertretung (Name, Adresse, Telefon, „wenden Sie sich an …“) ist **kein** Sondertext, solange ein Rückkehrdatum dabei steht.
+- **`auto`** nur, wenn alle drei Punkte gelten: Es ist eine Abwesenheitsnotiz, im Text steht ein eindeutiges Rückkehrdatum (alle Schreibweisen, auch „bis Montag, den 3. November“, „back on Nov 3rd“; ohne Jahr gilt das nächste passende Datum), und im Text steht nichts Besonderes. Als Rückkehrdatum gilt der erste Tag, an dem die Person wieder da ist. „Bis einschließlich 24.10.“ heißt 25.10.; ein einfaches „bis 24.10.“ zählt ebenso als letzter Abwesenheitstag. Steht dort „ab 26.10.2026 wieder erreichbar“, ist es der 26.10.2026; steht nur „bis 25.10. im Urlaub“, ist es der 26.10. Zweisprachige Texte sind normal, nur ein Datum muss sich eindeutig ergeben. Ein Hinweis auf eine Vertretung (Name, Adresse, Telefon, „wenden Sie sich an …“) ist **kein** Sondertext, solange ein Rückkehrdatum dabei steht.
 - **`offen`**, wenn eines gilt: kein Rückkehrdatum, Datum nicht eindeutig, Rückkehr mehr als 180 Tage in der Zukunft, oder ein Sondertext wie „nicht mehr im Unternehmen“, „ausgeschieden“, „im Ruhestand“, „Mail wird nicht weitergeleitet“, „Nachfolger“, „Elternzeit“ ohne Ende, ein Hinweis auf eine dauerhaft zuständige andere Person ohne Rückkehrdatum, eine persönliche Nachricht zusätzlich zur Abwesenheit.
 
 Beispiel (Abwesenheit, wird `auto`): Betreff „Automatische Antwort: <Newsletter-Betreff>“, Text „ich befinde mich bis 25.10. im Urlaub … Meine Vertretung ist … Ab 26.10.2026 stehe ich wieder zur Verfügung“, dazu ein englischer Absatz „currently not available, please contact your project manager“. Ergebnis: `art` `abwesenheit`, `rueckkehr` `2026-10-26`, `status` `auto`.
+
+Beispiel 2 (wird `auto`): Betreff „Automatische Antwort: <Newsletter-Betreff>“, Text „herzlichen Dank für Ihre Nachricht … vom 20.10.2026 bis einschließlich 24.10.2026 auf Montage … nur sporadisch erreichbar, Antwort möglicherweise mit Verzögerung … Ich wünsche Ihnen eine gesunde Herbstzeit“. Ergebnis: `rueckkehr` `2026-10-25`, `status` `auto`. Höflichkeitsfloskeln, Hinweise auf eingeschränkte Erreichbarkeit und der Ort der Abwesenheit sind kein Sondertext.
 - Im Zweifel `offen`. Das Dashboard prüft zusätzlich selbst: Ein `auto` ohne gültiges `rueckkehr` oder mit Rückkehr nach mehr als 180 Tagen zeigt es als offen.
 
 ## Felder in `emails/e-<Gmail-Nachrichten-ID>`

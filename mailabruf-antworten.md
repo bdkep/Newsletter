@@ -23,6 +23,21 @@ Erweiterung des bestehenden Mailabrufs („Newsletter: Mail-Abruf in die Inbox (
 4. Ist die Mail einer Ausgabe zuzuordnen (jüngster Versandtermin in `ausgaben` vor dem Maildatum), deren Namen in `ausgabe` eintragen.
 5. Der Zeitraum der Suche muss mindestens 14 Tage zurückreichen, damit ein ausgefallener Lauf nachgeholt wird. Das Dashboard löscht automatisch geschlossene Mails frühestens nach 30 Tagen, sie werden also nie erneut angelegt.
 
+## Den versendeten Newsletter einlesen (Archiv)
+
+Geht der Newsletter automatisch auch an `aschumann.bdkep+news@gmail.com` (Adresse als Empfänger im Versandtool eintragen), liegt eine Kopie im Postfach. Der Abruf legt sie im Archiv ab und kennt damit den echten Betreff.
+
+- **Erkennen:** Absender ist die Absenderadresse des Newsletters (Platzhalter `<Absenderadresse des Newsletters>`, bitte festlegen) und die Mail ist kein Auto-Reply (kein `Auto-Submitted`, kein „Automatische Antwort“ im Betreff). Diese Mail ist weder Quelle noch Antwort.
+- **Ablegen:** Dokument in `archiv`, Felder: `name` (Betreff), `betreff` (Original), `gmailId`, `versanddatum` (Datum der Mail, `JJJJ-MM-TT`), `abschnitte` (je `h2` ein Abschnitt, wie beim HTML-Import: ueberschrift, text, linkText, url), `einleitung`, `abbinder`, `stilvorbild` `false`, `quelle` `mail`, `erfasstAm`.
+- **Keine Doppelten, in dieser Reihenfolge prüfen, beim ersten Treffer nichts neu anlegen:**
+  1. Es gibt in `archiv` schon ein Dokument mit derselben `gmailId`.
+  2. Es gibt ein Dokument mit demselben `betreff` (ohne Beachtung von Groß- und Kleinschreibung und Leerzeichen) und demselben `versanddatum`.
+  3. Die Mail gehört zu einer Ausgabe: `ausgaben` mit `status` `planung` und `versanddatum` am Tag der Mail (oder Vortag/Folgetag, wenn es nur eine Ausgabe gibt). Dann gilt die Dokument-ID `archiv/v-<Ausgabe-ID>` (dieselbe wie bei „Als versendet ins Archiv“). Existiert sie schon (von Hand abgelegt), wird sie nur um `betreff` und `gmailId` ergänzt, die vorhandenen Abschnitte bleiben. Existiert sie nicht, wird sie neu angelegt, mit `ausgabeId`, und die Ausgabe auf `status` `versendet`, `versendetAm` gesetzt.
+  4. Sonst: neues Dokument `archiv/n-<Gmail-ID>`.
+- Das Dashboard schützt zusätzlich: „Als versendet ins Archiv“ legt nichts an, wenn für die Ausgabe schon ein Archiv-Eintrag existiert, und nimmt sie nur aus dem Versandplan.
+- **Betreff für die Antwort-Erkennung:** Der Betreff-Rest einer Mail (siehe Ablauf, Schritt 3) wird zuerst mit dem `betreff` des jüngsten Archiv-Eintrags verglichen. Das Zählen der häufigsten Rest-Betreffe bleibt nur als Rückfall, falls noch kein Newsletter eingelesen wurde.
+- Reihenfolge im Lauf: zuerst Newsletter-Kopien einlesen, dann Antworten einstufen.
+
 ## Einstufung
 
 | `art` | Erkennung | `status` |

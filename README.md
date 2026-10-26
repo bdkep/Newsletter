@@ -46,6 +46,10 @@ Reiter „E-Mails“ für die Antworten auf den Newsletter, damit sie nicht im T
 
 Datenbank-Sammlung `emails`: betreff, absender, datum, text (nur offene), art (`abwesenheit|antwort|zustellfehler`), rueckkehr, grund, status (`auto|offen|erledigt`), ausgabe, erfasstAm, aufgaben, antwortEntwurf, neuFuer, verlauf.
 
+## Versendeten Newsletter automatisch einlesen
+
+Geht der Newsletter auch an die Abrufadresse, legt der Mailabruf ihn im Archiv ab (`quelle` `mail`, mit `betreff` und `gmailId`) und kennt damit den echten Betreff für die Erkennung der Antworten. Doppelte sind ausgeschlossen: Der Abruf prüft `gmailId`, dann Betreff plus Versanddatum, dann die Ausgabe (`archiv/v-<Ausgabe>`); „Als versendet ins Archiv“ legt nichts an, wenn für die Ausgabe schon ein Archiv-Eintrag besteht. Regeln: `mailabruf-antworten.md`.
+
 ## Stand
 
 | Stufe | Inhalt | Status |

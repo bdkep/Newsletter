@@ -25,6 +25,13 @@ Reiter „Archiv“: bereits versendete Newsletter zum Nachschlagen, Durchsuchen
 
 Jedes Thema hat den Bereich „Newsletter-Text“ (im Eingangskorb und in der Ausgabe über „Text schreiben“ bzw. „Text bearbeiten“; der Text gehört zur Quelle und wandert mit ihr). Dort wird der Umfang in Zeichen eingestellt (Eingabefeld oder 300/500/800, Standard 450, Toleranz ±10 %); die Anzeige unter dem Kurztext zählt Zeichen gegen das Ziel. Der Vorschlag orientiert sich an den Newslettern im Archiv (Stilvorbilder, sonst die drei jüngsten; je Newsletter die zwei Abschnitte mit der Länge nächst dem Ziel). Reichen die Angaben der Quelle nicht, schreibt Claude keinen Text, sondern stellt bis zu 5 Rückfragen. Antworten kommen in das Feld „Ergänzende Angaben“, danach „Erneut vorschlagen“. Gespeichert und freigegeben wird nur nach Bestätigung durch die Person.
 
+## Duplizieren und Zuklappen
+
+- Ausgaben im Eingangskorb-Reiter lassen sich über die Kopfzeile zuklappen (nur Ansicht, im Browser gemerkt, ändert keine Daten).
+- „Duplizieren“ am Thema im Eingangskorb legt eine Kopie im Eingangskorb an. In einer Ausgabe wählt „Thema duplizieren nach“ die Zielausgabe (Vorauswahl: die nächste nach Versandtermin) oder den Eingangskorb.
+- Die Kopie ist eine neue Quelle (`h-…`, `quelle: kopie`, `dupliziertVon`) mit Quelldaten und Text. Der Text bleibt Entwurf (nie freigegeben), Versionen und Rückfragen werden nicht kopiert, ein Hinweis zur Aktualitätsprüfung wird gesetzt. Das Original bleibt unverändert.
+- Abhängigkeiten geprüft: Mailabruf (Ids `m-…`, Doppelte, „Letzter Abruf“) bleibt unberührt, „Als versendet ins Archiv“ nimmt nur freigegebene Texte, Löschen einer Ausgabe geht nur ohne Themen (Kopien zählen mit).
+
 ## Wünsche
 
 Reiter „Wünsche“ neben dem Eingangskorb, Logik wie im Sekretariat-Dashboard: Wunsch eintragen, Ausarbeitung (User Story, 2 bis 4 Kriterien, Erfolgsmaß; Vorschlag per Claude nur zum Prüfen, gespeichert wird erst nach Bestätigung), „Einbau prüfen“ (Abgleich mit den Abläufen des Dashboards und anderen Wünschen, Rückfragen, Vorgabe für Claude Code), Erledigt erst nach gespeicherter Einbauprüfung, danach „Bewährt?“ durch den Autor, Schließen und Wieder öffnen, Kommentare, Historie, „Neu für dich“. Ein schwebender Knopf „Wunsch“ rechts unten (auf dem Handy „+“) steht in jedem Reiter und öffnet direkt das Formular „Wunsch eintragen“. Beim Öffnen wählt jede Person „Ich bin …“ (Andreas, Moritz), das ist keine Anmeldung. Prüfen und Schließen dürfen Autor, Andreas und Moritz. Die Abläufe für die Einbauprüfung stehen als Text im Dashboard (`ABLAEUFE`) und müssen bei Änderungen der Abläufe nachgezogen werden. 

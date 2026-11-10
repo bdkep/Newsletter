@@ -61,6 +61,9 @@ textarea{min-height:96px;resize:vertical}
 .ausgabe{background:var(--surface);border:1px solid var(--line)}
 .ausgabe .kopf2{background:var(--navy);color:#fff;padding:16px 24px}
 .ausgabe h2{color:#fff;font-size:18px}
+.klappknopf{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:10px;cursor:pointer;min-height:44px;width:100%;color:#fff}
+.klappknopf:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.klappknopf .pfeil{color:var(--gold);font-size:18px;width:18px}
 .ausgabe .kopf2 .muted{color:var(--on-navy);margin-top:4px}
 .ausgabe .inhalt{padding:16px 24px;display:flex;flex-direction:column;gap:12px}
 .pos{border:1px solid var(--line);padding:12px 16px;display:flex;flex-direction:column;gap:8px}
@@ -208,6 +211,19 @@ const schreiben=async(fn,okMsg)=>{
 const upd=(c,patch,msg)=>schreiben(()=>db.doc('quellen/'+c.id).update(patch),msg);
 const zuordnen=(c,id)=>{const pos=Math.max(0,...inAusgabe(id).map(x=>x.position||0))+1;return upd(c,{ausgabe:id,position:pos},'Der Ausgabe zugeordnet.')};
 const freigeben=c=>upd(c,{ausgabe:'',position:0},'Zurück im Eingangskorb.');
+/* Thema duplizieren: neue Quelle (Id h-...) mit Kopie von Quelldaten und Text. Der Text bleibt Entwurf (nie freigegeben), Versionen und Rückfragen werden nicht mitkopiert.
+   quelle:'kopie' hält die Kopie aus Mailabruf (Id m-..., Doppelte, "Letzter Abruf", "neu") heraus. ausId '' = Eingangskorb. */
+function duplizieren(c,ausId){
+  const id='h-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),t=new Date().toISOString();
+  const pos=ausId?Math.max(0,...inAusgabe(ausId).map(x=>x.position||0))+1:0;
+  const hint='Dupliziert aus „'+(c.titel||'Ohne Titel')+'“. Angaben, Termine und Fristen auf Aktualität prüfen.'+(c.hinweisText?' '+c.hinweisText:'');
+  const doc={typ:c.typ||'note',titel:c.titel||'',text:c.text||'',url:c.url||'',mailBetreff:c.mailBetreff||'',mailAbsender:c.mailAbsender||'',mailDatum:c.mailDatum||'',quelle:'kopie',dupliziertVon:c.id,erfasstAm:t,erfasstVon:'Duplikat',
+    status:status(c)==='beobachtung'?'beobachtung':status(c),ausgabe:ausId||'',position:pos,hinweisArt:c.hinweisArt==='crit'?'crit':'warn',hinweisText:hint,zeichen:c.zeichen||ZSTD,ergaenzung:c.ergaenzung||''};
+  if(c.tb)doc.tb={ueberschrift:c.tb.ueberschrift||'',kurztext:c.tb.kurztext||'',linkText:c.tb.linkText||'',durch:c.tb.durch||'manuell',am:t,freigegeben:false};
+  const a=ausId&&ausgaben.find(x=>x.id===ausId);
+  return schreiben(()=>db.doc('quellen/'+id).set(doc),a?'Als Entwurf in „'+a.name+'“ dupliziert. Freigabe steht noch aus.':'Duplikat liegt im Eingangskorb. Freigabe steht noch aus.');
+}
+const naechsteAusgabe=id=>{const l=aktiv().slice().sort(ausSort),i=l.findIndex(x=>x.id===id);return l[i+1]||l.filter(x=>x.id!==id)[0]||null};
 async function hoch(c){
   const l=inAusgabe(ausgabeId(c)),i=l.findIndex(x=>x.id===c.id);if(i<1)return;
   const a=l[i],b=l[i-1];
@@ -290,15 +306,17 @@ function karte(c){
     el.append(h('div',{class:'knoepfe'},aktiv().map(a=>h('button',{class:'btn',type:'button',onclick:()=>zuordnen(c,a.id)},'In Ausgabe '+a.name.replace(/\s*\d{4}$/,'')))));
   }else if(status(c)==='beobachtung')el.append(h('div',{class:'muted'},'Beobachtung, kein Newsletterthema.'));
   el.append(h('div',{class:'knoepfe'},status(c)!=='beobachtung'?textToggle(c):null,h('button',{class:'btn',type:'button','aria-expanded':String(isOpen),onclick:flip},isOpen?'Weniger anzeigen':'Details'),
+    canWrite===false?null:h('button',{class:'btn',type:'button',onclick:()=>duplizieren(c,'')},'Duplizieren'),
     canWrite===false?null:delIds.has(c.id)?[h('button',{class:'btn danger',type:'button',onclick:()=>loeschen(c)},'Wirklich löschen'),h('button',{class:'btn',type:'button',onclick:()=>{delIds.delete(c.id);render()}},'Abbrechen')]:
       h('button',{class:'btn danger',type:'button',onclick:()=>{delIds.add(c.id);render()}},'Löschen')));
   return el;
 }
+const aToggle=id=>{aZu.has(id)?aZu.delete(id):aZu.add(id);lsSet('nl.azu',[...aZu].join(','));render()};
 function ausgabePanel(a){
-  const l=inAusgabe(a.id),warnN=l.filter(x=>x.hinweisText).length;
+  const l=inAusgabe(a.id),warnN=l.filter(x=>x.hinweisText).length,zu=aZu.has(a.id);
   return h('div',{class:'ausgabe'},
-    h('div',{class:'kopf2'},h('h2',{},'Ausgabe '+a.name),h('div',{class:'muted'},(a.versanddatum?'Versand '+datTag(a.versanddatum)+(a.versandzeit?', '+a.versandzeit+' Uhr':'')+' · ':'Termin offen · ')+l.length+(l.length===1?' Thema':' Themen')+' · '+warnN+' mit Hinweis · '+l.filter(x=>x.tb&&x.tb.freigegeben).length+' Texte freigegeben')),
-    h('div',{class:'inhalt'},
+    h('div',{class:'kopf2 klapp'},h('button',{class:'klappknopf',type:'button','aria-expanded':String(!zu),'aria-label':(zu?'Ausgabe aufklappen: ':'Ausgabe zuklappen: ')+a.name,onclick:()=>aToggle(a.id)},h('span',{class:'pfeil','aria-hidden':'true'},zu?'▸':'▾'),h('h2',{},'Ausgabe '+a.name)),h('div',{class:'muted'},(a.versanddatum?'Versand '+datTag(a.versanddatum)+(a.versandzeit?', '+a.versandzeit+' Uhr':'')+' · ':'Termin offen · ')+l.length+(l.length===1?' Thema':' Themen')+' · '+warnN+' mit Hinweis · '+l.filter(x=>x.tb&&x.tb.freigegeben).length+' Texte freigegeben')),
+    zu?null:h('div',{class:'inhalt'},
       !a.versanddatum?h('div',{class:'warn warn-k'},'Für diese Ausgabe fehlt der Versandtermin.'):null,
       termEdit.has(a.id)&&canWrite!==false?h('div',{class:'formular',style:'margin:0'},terminFelder(a.id,{name:a.name,datum:a.versanddatum,zeit:a.versandzeit,notiz:a.notiz}),
         h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>termSpeichern(a)},'Termin speichern'),h('button',{class:'btn',type:'button',onclick:()=>{termEdit.delete(a.id);['name','datum','zeit','notiz'].forEach(k=>delete drafts[a.id+'.'+k]);render()}},'Abbrechen'))):null,
@@ -311,7 +329,15 @@ function ausgabePanel(a){
         textOpen.has(c.id)?textPanel(c):null,
         h('div',{class:'knoepfe'},textToggle(c),
           canWrite===false?null:h('button',{class:'btn',type:'button',disabled:i===0,onclick:()=>hoch(c)},'Nach oben'),
-          canWrite===false?null:h('button',{class:'btn',type:'button',onclick:()=>freigeben(c)},'Zurück in den Eingangskorb')))})));
+          canWrite===false?null:h('button',{class:'btn',type:'button',onclick:()=>freigeben(c)},'Zurück in den Eingangskorb')),
+        canWrite===false?null:dupZeile(c,a))})));
+}
+/* Duplizieren in eine andere Ausgabe (Vorauswahl: die nächste nach Versandtermin) oder in den Eingangskorb */
+function dupZeile(c,a){
+  const ziele=aktiv().filter(x=>x.id!==a.id).sort(ausSort),nx=naechsteAusgabe(a.id),k='dup.'+c.id;
+  const sel=h('select',{id:'dup-'+c.id,'aria-label':'Ziel zum Duplizieren',onchange:e=>{drafts[k]=e.target.value}},ziele.map(x=>h('option',{value:x.id,selected:x.id===(drafts[k]||(nx&&nx.id))},x.name+(x.versanddatum?' ('+fmtD.format(new Date(x.versanddatum+'T12:00:00'))+')':''))),h('option',{value:'',selected:drafts[k]===''},'Eingangskorb'));
+  return h('div',{class:'zeile'},h('label',{class:'feld',style:'margin:0;flex:1 1 200px'},'Thema duplizieren nach',sel),
+    h('button',{class:'btn',type:'button',style:'align-self:flex-end',onclick:()=>duplizieren(c,drafts[k]!==undefined?drafts[k]:(nx?nx.id:''))},'Duplizieren'));
 }
 /* ---- Wünsche: Ideen zur Weiterentwicklung des Dashboards (Logik wie im Sekretariat-Dashboard) ----
    Sammlung `wuensche`: text, von, bereich, status (offen | ausgearbeitet | geprueft | erledigt | geschlossen), story, kriterien, erfolgsmass,
@@ -319,6 +345,7 @@ function ausgabePanel(a){
 const PERSONEN=['Andreas','Moritz'];
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+const aZu=new Set((lsGet('nl.azu')||'').split(',').filter(Boolean));
 let me=PERSONEN.includes(lsGet('nl.me'))?lsGet('nl.me'):'';
 const VIEWS=['eingang','termine','archiv','wuensche'];
 let view=VIEWS.includes(lsGet('nl.view'))?lsGet('nl.view'):'eingang';
@@ -346,8 +373,8 @@ const wLabel=o=>o?'Wunsch von '+(o.von||'unbekannt')+': '+String(o.text||'').rep
 const ART={dafuer:'spricht dafür',dagegen:'spricht dagegen',zusammen:'zusammen umsetzen'};
 const wBereich=()=>'Newsletter';
 const ABLAEUFE="- Eingangskorb: Quellen (Mail, Datei, Web, Notiz) werden von Hand erfasst oder per Mailabruf angelegt. Status `vorschlag`, `kandidat`, `beobachtung`. Mailabruf täglich 23:45 Uhr (Europe/Berlin), liest nur Mails an `aschumann.bdkep+news@gmail.com` (Gmail nur lesen, nie senden, löschen, verschieben, als gelesen markieren), legt `quellen/m-<Gmail-ID>` an, keine Doppelten.\n"+
-"- Ausgaben und Zuordnung: Quellen werden per Knopf einer Ausgabe zugeordnet (`ausgabe`, `position`) oder zurück in den Eingangskorb gelegt. Die Reihenfolge in der Ausgabe bestimmt die Reihenfolge im Newsletter. Beobachtungen sind keine Newsletterthemen.\n"+
-"- Textbausteine: Je Quelle ein Newsletter-Text (Überschrift, Kurztext, Link-Text). Der Textbereich steht im Eingangskorb und in der Ausgabe (Knopf „Text schreiben“) und wandert als Teil der Quelle mit, wenn sie einer Ausgabe zugeordnet oder zurückgelegt wird. Vorschlag per Claude nur nach Klick auf \"Jetzt senden\" mit Vorschau der gesendeten Daten, der Absender der Mail geht nicht mit. Der Vorschlag wird nie automatisch gespeichert oder freigegeben. Jede Speicherung setzt die Freigabe zurück, frühere Fassungen bleiben (höchstens 20). Zeichenumfang je Thema einstellbar (`zeichen`, Standard 450, 100 bis 3000, Toleranz ±10 %), ergänzende Angaben (`ergaenzung`) gehen mit. Reichen die Angaben der Quelle nicht, liefert Claude statt eines Textes Rückfragen (`rueckfragen`, höchstens 5), die im Thema angezeigt werden. Stilbeispiele: als Stilvorbild markierte Archiv-Newsletter, sonst die drei jüngsten, je die zwei Abschnitte mit der Länge nächst dem Zielumfang. Stilvorgaben in `style.md`: sachlich, keine Werbesprache, keine rhetorischen Fragen, Angaben nur aus der Quelle, fehlende als `[Angabe fehlt]`.\n"+
+"- Ausgaben und Zuordnung: Quellen werden per Knopf einer Ausgabe zugeordnet (`ausgabe`, `position`) oder zurück in den Eingangskorb gelegt. Die Reihenfolge in der Ausgabe bestimmt die Reihenfolge im Newsletter. Ausgaben lassen sich zuklappen (nur Ansicht, im Browser gemerkt, ändert keine Daten). Beobachtungen sind keine Newsletterthemen.\n"+
+"- Textbausteine: Je Quelle ein Newsletter-Text (Überschrift, Kurztext, Link-Text). Der Textbereich steht im Eingangskorb und in der Ausgabe (Knopf „Text schreiben“) und wandert als Teil der Quelle mit, wenn sie einer Ausgabe zugeordnet oder zurückgelegt wird. Vorschlag per Claude nur nach Klick auf \"Jetzt senden\" mit Vorschau der gesendeten Daten, der Absender der Mail geht nicht mit. Der Vorschlag wird nie automatisch gespeichert oder freigegeben. Jede Speicherung setzt die Freigabe zurück, frühere Fassungen bleiben (höchstens 20). Zeichenumfang je Thema einstellbar (`zeichen`, Standard 450, 100 bis 3000, Toleranz ±10 %), ergänzende Angaben (`ergaenzung`) gehen mit. Reichen die Angaben der Quelle nicht, liefert Claude statt eines Textes Rückfragen (`rueckfragen`, höchstens 5), die im Thema angezeigt werden. Stilbeispiele: als Stilvorbild markierte Archiv-Newsletter, sonst die drei jüngsten, je die zwei Abschnitte mit der Länge nächst dem Zielumfang. Thema duplizieren: im Eingangskorb (Knopf „Duplizieren“, Kopie landet im Eingangskorb) und in der Ausgabe (Auswahl der Zielausgabe, Vorauswahl die nächste nach Versandtermin, oder Eingangskorb). Die Kopie ist eine neue Quelle (`h-<Zeit>`, `quelle` = `kopie`, `dupliziertVon`), nimmt Quelldaten und Text mit, der Text bleibt Entwurf (nie freigegeben), Versionen und Rückfragen werden nicht kopiert, Hinweis zur Aktualitätsprüfung wird gesetzt. Das Original bleibt unverändert, die Kopie zählt nicht als Mailabruf. Stilvorgaben in `style.md`: sachlich, keine Werbesprache, keine rhetorischen Fragen, Angaben nur aus der Quelle, fehlende als `[Angabe fehlt]`.\n"+
 "- Export: Kopieren des Textes der Ausgabe ist da, Vorschau und HTML-Export folgen (Stufe 5), Prüfung in Stufe 6. Der Export enthält nur freigegebene Texte, keine internen Hinweise und Quelldaten.\n"+
 "- Design: Farben, Schrift und Logos kommen aus `design/`, das Dashboard erfindet kein Design.\n"+
 "- Wünsche: Sammlung `wuensche`. Status `offen`, `ausgearbeitet`, `geprueft` (Einbauprüfung gespeichert), `erledigt`, `geschlossen` (nicht umgesetzt; geschlossene Wünsche zählen bei der Einbauprüfung nicht mit). Ausarbeitung (Story, Kriterien, Erfolgsmaß) bestätigt der Autor. Danach ist \"Einbau prüfen\" der feste nächste Schritt; ein ausgearbeiteter Wunsch wird erst nach gespeicherter Einbauprüfung erledigt. Ändert sich die Ausarbeitung, entfällt die Prüfung. Nach Erledigt beantwortet der Autor \"Bewährt?\". Ein Wunsch wird von einer Person erledigt, nie vom Agenten.\n"+

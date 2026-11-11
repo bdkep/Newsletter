@@ -29,6 +29,9 @@ h1{margin:4px 0 0;font-size:30px;font-weight:800;line-height:1.2}
 main{display:flex;flex-wrap:wrap;gap:24px;padding-block:24px 40px;align-items:flex-start}
 .links{flex:1 1 640px;min-width:0;background:var(--surface);border:1px solid var(--line)}
 .rechts{flex:1 1 520px;min-width:0;display:flex;flex-direction:column;gap:24px}
+/* Eingangskorb und Ausgaben untereinander in einer Spalte */
+main.einspaltig{flex-direction:column;flex-wrap:nowrap;align-items:stretch}
+main.einspaltig>.links,main.einspaltig>.rechts{flex:0 0 auto;width:100%}
 .sec-head{padding:20px 24px;border-bottom:1px solid var(--line)}
 .sec-top{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
 h2{margin:0;font-size:20px;font-weight:800;color:var(--navy)}
@@ -1489,7 +1492,7 @@ function render(){
       [['chat','Chat'+(cs.neu?' ('+cs.neu+' neu)':'')],['eingang','Eingangskorb'],['termine','Versandplan'+(aktiv().length?' ('+aktiv().length+')':'')],['archiv','Archiv'+(archiv.length?' ('+archiv.length+')':'')],['wuensche','Wünsche'+(ws.fuermich?' ('+ws.fuermich+' neu für dich)':ws.offen?' ('+ws.offen+' offen)':'')]].map(([k,t])=>h('button',{class:'btn'+(view===k?' on':''),type:'button','aria-pressed':String(view===k),onclick:()=>{view=k;lsSet('nl.view',k);render()}},t)),
       h('label',{class:'person'},'Ich bin',h('select',{id:'ich-bin','aria-label':'Ich bin',onchange:e=>{me=e.target.value;lsSet('nl.me',me);render()}},h('option',{value:''},'bitte wählen'),PERSONEN.map(n=>h('option',{value:n,selected:n===me},n))))),
     h('section',{class:'kpis gutter',hidden:view==='chat'},(view==='chat'?[]:view==='wuensche'?kpW:view==='termine'?kpT():view==='archiv'?kpA():kp).map(([v,l])=>h('div',{class:'kpi'},h('div',{class:'v'},String(v)),h('div',{class:'l'},l)))),
-    view==='chat'?chatMain():view==='wuensche'?wuenscheView():view==='archiv'?archivView():view==='termine'?termineView():h('main',{class:'gutter'},
+    view==='chat'?chatMain():view==='wuensche'?wuenscheView():view==='archiv'?archivView():view==='termine'?termineView():h('main',{class:'gutter einspaltig'},
       h('section',{class:'links'},
         h('div',{class:'sec-head'},
           h('div',{class:'sec-top'},h('h2',{},'Eingangskorb'),h('span',{class:'muted'},shown.length+(shown.length===1?' Eintrag':' Einträge')+' in dieser Ansicht')),

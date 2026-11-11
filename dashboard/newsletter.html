@@ -336,7 +336,7 @@ function phaseKnoepfe(a){
   return h('div',{class:'knoepfe'},
     next&&next[0]!=='versendet'&&canWrite!==false?h('button',{class:'btn primary',type:'button',onclick:()=>phaseSetzen(a,next[0],true)},ph==='gegenlesen'?'Freigeben, weiter zu '+next[1]:'Weiter zu '+next[1]):null,
     prev&&canWrite!==false?h('button',{class:'btn',type:'button',onclick:()=>phaseSetzen(a,prev[0],false)},'Zurück zu '+prev[1]):null,
-    next&&next[0]==='versendet'?h('span',{class:'muted'},'Nach dem finalen Versand die Ausgabe im Versandplan ins Archiv legen.'):null,
+    next&&next[0]==='versendet'&&canWrite!==false?h('button',{class:'btn primary',type:'button','aria-expanded':String(delIds.has('v-'+a.id)),onclick:()=>{delIds.has('v-'+a.id)?delIds.delete('v-'+a.id):delIds.add('v-'+a.id);render()}},'Versendet: HTML ins Archiv ablegen'):null,
     a.freigabe&&a.freigabe.von?h('span',{class:'muted'},'Freigegeben von '+a.freigabe.von+' · '+dat(a.freigabe.am,true)):null);
 }
 /* Gesamttext (Feld `gesamt` in `ausgaben`): {intro, abschnitte:[{id,ueberschrift,text,linkText,url}], erzeugtAm}. Entsteht aus den Einzeltexten und ist danach unabhängig davon bearbeitbar.
@@ -474,6 +474,7 @@ function ausgabePanel(a){
     h('div',{class:'kopf2 klapp',role:'button',tabindex:'0','aria-expanded':String(!zu),title:zu?'Ausgabe aufklappen':'Ausgabe einklappen',onclick:klapp,onkeydown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();klapp()}}},h('span',{class:'pfeil','aria-hidden':'true'},zu?'▸':'▾'),h('h2',{},'Ausgabe '+a.name),h('div',{class:'muted'},(a.versanddatum?'Versand '+datTag(a.versanddatum)+(a.versandzeit?', '+a.versandzeit+' Uhr':'')+' · ':'Termin offen · ')+l.length+(l.length===1?' Thema':' Themen')+' · '+warnN+' mit Hinweis · '+l.filter(x=>x.tb&&x.tb.freigegeben).length+' Texte freigegeben'+(phaseOf(a)?' · Status: '+phaseLabel(phaseOf(a)):'')),phaseOf(a)?phaseLeiste(a):null),
     zu?null:h('div',{class:'inhalt'},
       phaseKnoepfe(a),
+      delIds.has('v-'+a.id)&&canWrite!==false?versandForm(a):null,
       phaseOf(a)&&phaseOf(a)!=='versendet'?katListe(a):null,
       PHASEN.findIndex(p=>p[0]===phaseOf(a))>=2&&phaseOf(a)!=='versendet'?gesamtPanel(a):null,
       phaseOf(a)&&phaseOf(a)!=='versendet'?termineBereich(a):null,
@@ -1106,13 +1107,30 @@ async function termSpeichern(a){
 }
 const termLoeschen=a=>schreiben(async()=>{await db.doc('ausgaben/'+a.id).delete();delIds.delete('t-'+a.id);termEdit.delete(a.id)},'Ausgabe gelöscht.');
 /* Versendet: freigegebene Texte wandern als Newsletter ins Archiv, die Ausgabe verschwindet aus Planung und Zuordnung */
+/* Abschluss: Der versendete HTML-Code aus dem Newsletterprogramm ist Pflicht und wird unverändert archiviert (Feld `html`).
+   Die Abschnitte werden bevorzugt aus diesem HTML gelesen, sonst aus dem Gesamttext, zuletzt aus den freigegebenen Einzeltexten. */
+function versandForm(a){
+  const k='vs.'+a.id,ph=phaseOf(a),frueh=!!ph&&PHASEN.findIndex(p=>p[0]===ph)<PHASEN.findIndex(p=>p[0]==='test2');
+  const t=h('textarea',{id:'vs-'+a.id,'aria-label':'Versendeter HTML-Code',style:'min-height:160px',placeholder:'HTML-Code einfügen, genau so, wie er mit dem Newsletterprogramm versendet wurde.',oninput:e=>{drafts[k]=e.target.value}});t.value=drafts[k]||'';
+  const file=h('input',{type:'file',accept:'.html,.htm','aria-label':'HTML-Datei wählen',onchange:async e=>{const f=e.target.files[0];if(f){drafts[k]=await f.text();render()}}});
+  return h('div',{class:'senden'},h('strong',{},'Als versendet ins Archiv ablegen'),
+    h('div',{},'Der HTML-Code, der mit dem Newsletterprogramm versendet wurde, wird unverändert im Archiv gespeichert. Die Ausgabe verschwindet danach aus Versandplan und Zuordnung.'),
+    frueh?h('div',{class:'warn warn-k'},'Der Status steht erst auf „'+phaseLabel(ph)+'“. Nach dem Ablauf kommt das Archiv erst nach dem zweiten Testversand und dem finalen Versand.'):null,
+    h('label',{class:'feld'},'Versendeter HTML-Code',t),h('label',{class:'feld'},'oder HTML-Datei',file),
+    h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>alsVersendet(a)},'Ins Archiv legen'),h('button',{class:'btn',type:'button',onclick:()=>{delIds.delete('v-'+a.id);render()}},'Abbrechen')));
+}
 function alsVersendet(a){
-  const ab=inAusgabe(a.id).filter(c=>c.tb&&c.tb.freigegeben).map(c=>({ueberschrift:c.tb.ueberschrift||c.titel||'',text:c.tb.kurztext||'',linkText:c.tb.linkText||'',url:''}));
-  if(!ab.length)return toast('Ohne freigegebene Texte lässt sich die Ausgabe nicht ins Archiv legen.');
+  const html=(drafts['vs.'+a.id]||'').trim();
+  if(!html)return toast('Bitte den versendeten HTML-Code einfügen.');
+  if(!/<(html|body|table|div|p)\b/i.test(html))return toast('Das sieht nicht nach HTML-Code aus.');
+  let ab=abschnitteAusHtml(html);
+  if(!ab.length&&a.gesamt&&Array.isArray(a.gesamt.abschnitte))ab=a.gesamt.abschnitte.map(x=>({ueberschrift:x.ueberschrift||'',text:x.text||'',linkText:x.linkText||'',url:x.url||''}));
+  if(!ab.length)ab=inAusgabe(a.id).filter(c=>c.tb&&c.tb.freigegeben).map(c=>({ueberschrift:c.tb.ueberschrift||c.titel||'',text:c.tb.kurztext||'',linkText:c.tb.linkText||'',url:''}));
+  if(!ab.length)return toast('Im HTML sind keine Überschriften (h2) zu finden und es gibt keinen Gesamttext. Bitte den Code prüfen.',6000);
   return schreiben(async()=>{
-    await db.doc('archiv/v-'+a.id).set({name:a.name,versanddatum:a.versanddatum||heuteBerlin(),titel:'',einleitung:'',abschnitte:ab,abbinder:'',stilvorbild:false,notiz:a.notiz||'',termine:Array.isArray(a.termine)?a.termine:[],quelle:'ausgabe',ausgabeId:a.id,erfasstAm:nowIso()});
+    await db.doc('archiv/v-'+a.id).set({name:a.name,versanddatum:a.versanddatum||heuteBerlin(),titel:'',einleitung:(a.gesamt&&a.gesamt.intro)||'',abschnitte:ab,html,abbinder:'',stilvorbild:false,notiz:a.notiz||'',termine:Array.isArray(a.termine)?a.termine:[],quelle:'ausgabe',ausgabeId:a.id,erfasstAm:nowIso()});
     await db.doc('ausgaben/'+a.id).update({status:'versendet',versendetAm:nowIso()});
-    delIds.delete('v-'+a.id);
+    delIds.delete('v-'+a.id);delete drafts['vs.'+a.id];
   },'Im Archiv abgelegt. Die Ausgabe ist aus dem Versandplan genommen.');
 }
 function termKarte(a){
@@ -1130,14 +1148,13 @@ function termKarte(a){
   if(editing&&canAct)el.append(h('div',{class:'formular',style:'margin:0'},terminFelder(a.id,{name:a.name,datum:a.versanddatum,zeit:a.versandzeit,notiz:a.notiz}),
     h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>termSpeichern(a)},'Termin speichern'),h('button',{class:'btn',type:'button',onclick:()=>{termEdit.delete(a.id);['name','datum','zeit','notiz'].forEach(k=>delete drafts[a.id+'.'+k]);render()}},'Abbrechen'))));
   if(canAct){
-    if(delIds.has('v-'+a.id))el.append(h('div',{class:'senden'},h('strong',{},'Als versendet ablegen?'),h('div',{},fr+(fr===1?' freigegebener Text wird':' freigegebene Texte werden')+' als Newsletter im Archiv abgelegt. Die Ausgabe verschwindet aus Versandplan und Zuordnung.'),
-      h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>alsVersendet(a)},'Ja, ins Archiv'),h('button',{class:'btn',type:'button',onclick:()=>{delIds.delete('v-'+a.id);render()}},'Abbrechen'))));
+    if(delIds.has('v-'+a.id))el.append(versandForm(a));
     el.append(h('div',{class:'knoepfe'},
       h('button',{class:'btn',type:'button',onclick:()=>{termEdit.has(a.id)?termEdit.delete(a.id):termEdit.add(a.id);render()}},editing?'Bearbeitung schließen':'Termin ändern'),
-      h('button',{class:'btn',type:'button',disabled:!fr,onclick:()=>{delIds.add('v-'+a.id);render()}},'Als versendet ins Archiv'),
+      h('button',{class:'btn',type:'button',disabled:!l.length,onclick:()=>{delIds.add('v-'+a.id);render()}},'Als versendet ins Archiv'),
       !l.length?(delIds.has('t-'+a.id)?[h('button',{class:'btn danger',type:'button',onclick:()=>termLoeschen(a)},'Wirklich löschen'),h('button',{class:'btn',type:'button',onclick:()=>{delIds.delete('t-'+a.id);render()}},'Abbrechen')]:
         h('button',{class:'btn danger',type:'button',onclick:()=>{delIds.add('t-'+a.id);render()}},'Löschen')):null));
-    if(!fr)el.append(h('div',{class:'meta'},'Ins Archiv legen geht, sobald mindestens ein Text freigegeben ist.'));
+    if(!l.length)el.append(h('div',{class:'meta'},'Ins Archiv legen geht, sobald Themen zugeordnet sind. Dafür wird der versendete HTML-Code gebraucht.'));
   }
   return el;
 }

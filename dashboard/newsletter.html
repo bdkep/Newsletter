@@ -65,9 +65,9 @@ textarea{min-height:96px;resize:vertical}
 .phasen li{padding:3px 8px;border:1px solid var(--on-navy);color:var(--on-navy)}
 .phasen li.fertig{background:rgba(255,255,255,.18);color:#fff}
 .phasen li.jetzt{background:#fff;color:var(--navy);font-weight:700;border-color:#fff}
-.ausgabe .kopf2.klapp{cursor:pointer;position:relative;padding-left:44px;user-select:none}
-.ausgabe .kopf2.klapp:focus-visible{outline:3px solid #fff;outline-offset:-3px}
-.ausgabe .kopf2.klapp .pfeil{position:absolute;left:18px;top:16px;font-size:18px;line-height:1.3}
+.klappknopf{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:10px;cursor:pointer;min-height:44px;width:100%;color:#fff}
+.klappknopf:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.klappknopf .pfeil{color:var(--gold);font-size:18px;width:18px}
 .ausgabe .kopf2 .muted{color:var(--on-navy);margin-top:4px}
 .ausgabe .inhalt{padding:16px 24px;display:flex;flex-direction:column;gap:12px}
 .pos{border:1px solid var(--line);padding:12px 16px;display:flex;flex-direction:column;gap:8px}
@@ -82,7 +82,7 @@ textarea{min-height:96px;resize:vertical}
 .senden{border:1px solid var(--gold);background:var(--warn-bg);padding:12px 14px;font-size:13px;line-height:1.5;color:var(--warn-ink);display:flex;flex-direction:column;gap:8px}
 .senden ul{margin:0;padding-left:18px}
 .tb-vorschau{font-size:14px;color:var(--ink)}
-.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:20;min-height:48px;padding:0 20px;border-radius:2px;font-size:14px;font-weight:700;background:var(--gold);color:var(--navy);border:1px solid var(--navy);display:inline-flex;align-items:center;gap:8px}
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:20;min-height:48px;padding:0 20px;border-radius:999px;box-shadow:0 4px 16px rgba(0,26,61,.10);font-size:14px;font-weight:700;background:var(--navy);color:#fff;border:1px solid var(--navy);display:inline-flex;align-items:center;gap:8px}
 .fab .plus{font-size:20px;line-height:1}
 @media (max-width:520px){.fab{padding:0 16px}.fab .txt{display:none}.fab{min-width:48px;justify-content:center}}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--navy);color:#fff;padding:10px 16px;font-size:14px;max-width:90vw;border-left:4px solid var(--gold)}
@@ -91,11 +91,59 @@ textarea{min-height:96px;resize:vertical}
 .tabs .person select{width:auto;min-width:140px}
 .pill{font-size:12px;font-weight:700;padding:2px 8px;background:#E8EBEF;color:#2B3440}
 .pill.neu{background:var(--navy);color:#fff}.pill.ok{background:#E1F1E9;color:#1E5A40}.pill.warn{background:var(--warn-bg);color:var(--warn-ink)}.pill.bad{background:var(--crit-bg);color:var(--crit-ink)}.pill.neutral{background:#E8EBEF;color:#566070}
+article.k>.kbody{display:flex;flex-direction:column;gap:10px;min-width:0}
+.kkopf{display:flex;gap:10px;align-items:flex-start;cursor:pointer;min-height:44px}
+.kkopf .chev{color:var(--navy);font-size:16px;line-height:1.35;width:14px;flex:none}
+.kkopf .kinfo{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
 article.k.fuer-mich{border-left:4px solid var(--gold)}
 ul.hist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px}
 ul.hist li{display:flex;flex-wrap:wrap;gap:4px 10px;overflow-wrap:anywhere}ul.hist .t{color:var(--muted);font-size:12px;min-width:16px}
 .wliste{padding:20px 24px;display:flex;flex-direction:column;gap:12px}
 @media (max-width:520px){.sec-head,.liste,.ausgabe .inhalt{padding-left:16px;padding-right:16px}.formular{margin-left:16px;margin-right:16px}.ausgabe .kopf2{padding-left:16px;padding-right:16px}}
+/* Chat: Verlauf in einer Karte, neueste unten, Eingabe darunter (eckig wie das übrige Dashboard) */
+.chat{max-width:960px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;min-width:0;width:100%}
+.chat .btn.small{min-height:32px;padding:0 10px;font-size:13px}
+.chat-wrap{display:flex;flex-direction:column;gap:16px;padding-block:24px 40px}
+.chat-wrap .chips{margin-top:0}
+.chat-suche{max-width:960px}
+.chat-list{list-style:none;margin:0;padding:16px 16px 8px;display:flex;flex-direction:column;gap:6px;max-height:70vh;max-height:max(320px,calc(100dvh - 420px));overflow-y:auto;min-width:0}
+.chat-tag{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:8px 0 2px}
+.chat-tag::before,.chat-tag::after{content:"";flex:1;height:1px;background:var(--line)}
+.chat-neu{display:flex;align-items:center;gap:10px;margin:6px 0}
+.chat-neu::before,.chat-neu::after{content:"";flex:1;height:1px;background:var(--gold)}
+.chat-m{display:flex;gap:10px;align-items:flex-start;padding:6px 8px;min-width:0}
+.chat-m.fuer{background:var(--warn-bg)}
+.chat-av{flex:none;width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.chat-av.p-Andreas{background:var(--navy);color:#fff;border-color:var(--navy)}
+.chat-av.p-Moritz{background:var(--gold);color:var(--navy);border-color:var(--gold)}
+.chat-k{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.chat-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:13px}
+.chat-meta b{color:var(--navy)}
+.chat-meta .t{color:var(--muted);font-variant-numeric:tabular-nums}
+.chat-meta .btn{margin-left:auto}
+.chat-text{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.chat-m.antwort,.chat-th-sum,.chat-th-form{margin-left:42px}
+.chat-m.antwort,.chat-th-form{border-left:2px solid var(--line);padding-left:12px}
+.chat-th-sum{margin-top:-4px}
+.chat-th-btn{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px;border:1px solid transparent;background:transparent;padding:4px 8px;font-size:13px;font-weight:700;color:var(--navy);min-height:32px}
+.chat-th-btn:hover{border-color:var(--line);background:var(--surface);filter:none}
+.chat-th-btn .t{font-weight:400;color:var(--muted)}
+.chat-av.mini{width:22px;height:22px;font-size:9px}
+.chat-th-form{padding:6px 0 6px 12px}
+.chat-form.th{padding:8px 10px;border:1px solid var(--line)}
+.chat-form.th textarea{min-height:56px}
+@media (max-width:520px){.chat-m.antwort,.chat-th-sum,.chat-th-form{margin-left:16px}}
+.chat .at{background:#DCE6F2;color:var(--navy);font-weight:600;padding:0 3px}
+.chat .at.ich{background:var(--warn-bg);color:var(--warn-ink);font-weight:700}
+.chat-form{position:relative;display:flex;flex-direction:column;gap:8px;padding:12px 16px 16px;border-top:1px solid var(--line);background:var(--bg)}
+.chat-form textarea{min-height:76px;resize:vertical}
+.chat-form .zr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.chat-erw{position:absolute;left:16px;bottom:calc(100% - 4px);z-index:6;min-width:200px;display:flex;flex-direction:column;gap:2px;padding:6px;background:var(--surface);border:1px solid var(--navy)}
+.chat-erw[hidden]{display:none}
+.chat-erw button{border:0;background:transparent;text-align:left;padding:8px 10px;font-weight:600;font-size:14px;color:var(--ink)}
+.chat-erw button[aria-selected="true"]{background:#DCE6F2;color:var(--navy)}
+.chat-leer{padding:22px 16px;text-align:center;color:var(--muted);font-size:14px;list-style:none}
+.chat-leer b{display:block;color:var(--navy);font-size:16px;margin-bottom:4px}
 </style>
 <div class="page" id="app"></div>
 <script>
@@ -112,7 +160,7 @@ function h(tag,attrs,...kids){const e=document.createElement(tag);
   for(const c of kids.flat()){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(String(c)))}return e}
 
 let db=null,canWrite=null,items=[],ausgaben=[],loaded=false,filter='alle',showNew=false,newTyp='note',newIssue=false,toastMsg='',toastT=0,busy=false;
-const openIds=new Set(),textOpen=new Set(),delIds=new Set(),drafts={},askIds=new Set(),genBusy=new Set(),vorschlagIds=new Set();
+const cardOpenIds=new Set(),openIds=new Set(),textOpen=new Set(),delIds=new Set(),drafts={},askIds=new Set(),genBusy=new Set(),vorschlagIds=new Set();
 let sample=null;
 const WORDS=t=>((t||'').trim().match(/\S+/g)||[]).length;
 const ZMIN=100,ZMAX=3000,ZSTD=450;
@@ -215,6 +263,19 @@ const schreiben=async(fn,okMsg)=>{
 const upd=(c,patch,msg)=>schreiben(()=>db.doc('quellen/'+c.id).update(patch),msg);
 const zuordnen=(c,id)=>{const pos=Math.max(0,...inAusgabe(id).map(x=>x.position||0))+1;return upd(c,{ausgabe:id,position:pos},'Der Ausgabe zugeordnet.')};
 const freigeben=c=>upd(c,{ausgabe:'',position:0},'Zurück im Eingangskorb.');
+/* Thema duplizieren: neue Quelle (Id h-...) mit Kopie von Quelldaten und Text. Der Text bleibt Entwurf (nie freigegeben), Versionen und Rückfragen werden nicht mitkopiert.
+   quelle:'kopie' hält die Kopie aus Mailabruf (Id m-..., Doppelte, "Letzter Abruf", "neu") heraus. ausId '' = Eingangskorb. */
+function duplizieren(c,ausId){
+  const id='h-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),t=new Date().toISOString();
+  const pos=ausId?Math.max(0,...inAusgabe(ausId).map(x=>x.position||0))+1:0;
+  const hint='Dupliziert aus „'+(c.titel||'Ohne Titel')+'“. Angaben, Termine und Fristen auf Aktualität prüfen.'+(c.hinweisText?' '+c.hinweisText:'');
+  const doc={typ:c.typ||'note',titel:c.titel||'',text:c.text||'',url:c.url||'',mailBetreff:c.mailBetreff||'',mailAbsender:c.mailAbsender||'',mailDatum:c.mailDatum||'',quelle:'kopie',dupliziertVon:c.id,erfasstAm:t,erfasstVon:'Duplikat',
+    status:status(c)==='beobachtung'?'beobachtung':status(c),ausgabe:ausId||'',position:pos,hinweisArt:c.hinweisArt==='crit'?'crit':'warn',hinweisText:hint,zeichen:c.zeichen||ZSTD,ergaenzung:c.ergaenzung||''};
+  if(c.tb)doc.tb={ueberschrift:c.tb.ueberschrift||'',kurztext:c.tb.kurztext||'',linkText:c.tb.linkText||'',durch:c.tb.durch||'manuell',am:t,freigegeben:false};
+  const a=ausId&&ausgaben.find(x=>x.id===ausId);
+  return schreiben(()=>db.doc('quellen/'+id).set(doc),a?'Als Entwurf in „'+a.name+'“ dupliziert. Freigabe steht noch aus.':'Duplikat liegt im Eingangskorb. Freigabe steht noch aus.');
+}
+const naechsteAusgabe=id=>{const l=aktiv().slice().sort(ausSort),i=l.findIndex(x=>x.id===id);return l[i+1]||l.filter(x=>x.id!==id)[0]||null};
 async function hoch(c){
   const l=inAusgabe(ausgabeId(c)),i=l.findIndex(x=>x.id===c.id);if(i<1)return;
   const a=l[i],b=l[i-1];
@@ -270,35 +331,39 @@ const textBadge=c=>h('div',{class:'zeile'},h('span',{class:'badge',style:!c.tb?'
 function karte(c){
   const s=SRC[c.typ]||SRC.note,isOpen=openIds.has(c.id),flip=()=>{isOpen?openIds.delete(c.id):openIds.add(c.id);render()};
   const neu=c.quelle==='mail'&&!c.ausgabe&&status(c)==='vorschlag';
-  const el=h('article',{class:'k'});
-  el.append(h('div',{class:'zeile'},h('span',{class:'badge',style:s.s},s.l),c.quelle==='mail'?h('span',{class:'muted'},'per Mailabruf'):null,h('span',{class:'muted'},STATUS[status(c)]+(neu?' · neu':'')),h('span',{class:'muted',style:'margin-left:auto'},'erfasst '+dat(c.erfasstAm))));
-  el.append(h('h3',{},c.titel||'Ohne Titel'));
-  if(c.text)el.append(h('p',{},isOpen?'':kurz(c.text,240)));
-  const w=warnBox(c);if(w)el.append(w);
-  el.append(h('div',{class:'meta'},metaText(c)));
+  const el=h('article',{class:'k'}),body=h('div',{class:'kbody'}),aufg=cardOpenIds.has(c.id);
+  const kopf=h('div',{class:'kkopf',role:'button',tabindex:'0','aria-expanded':String(aufg),title:aufg?'Beitrag einklappen':'Beitrag ausklappen',onclick:()=>{aufg?cardOpenIds.delete(c.id):cardOpenIds.add(c.id);render()},onkeydown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.currentTarget.click()}}});
+  kopf.append(h('span',{class:'chev','aria-hidden':'true'},aufg?'▾':'▸'),h('div',{class:'kinfo'},h('div',{class:'zeile'},h('span',{class:'badge',style:s.s},s.l),c.quelle==='mail'?h('span',{class:'muted'},'per Mailabruf'):null,h('span',{class:'muted'},STATUS[status(c)]+(neu?' · neu':'')),h('span',{class:'muted',style:'margin-left:auto'},'erfasst '+dat(c.erfasstAm))),h('h3',{},c.titel||'Ohne Titel')));
+  el.append(kopf);
+  if(!aufg)return el;
+  if(c.text)body.append(h('p',{},isOpen?'':kurz(c.text,240)));
+  const w=warnBox(c);if(w)body.append(w);
+  body.append(h('div',{class:'meta'},metaText(c)));
   if(isOpen){
-    if(c.text)el.querySelector('p').replaceWith(h('pre',{class:'volltext'},c.text));
-    if(c.url)el.append(h('a',{href:c.url,target:'_blank',rel:'noopener noreferrer',style:'font-size:13px;color:var(--navy)'},'Link öffnen'));
+    if(c.text)body.querySelector('p').replaceWith(h('pre',{class:'volltext'},c.text));
+    if(c.url)body.append(h('a',{href:c.url,target:'_blank',rel:'noopener noreferrer',style:'font-size:13px;color:var(--navy)'},'Link öffnen'));
     if(canWrite!==false){
       const dk=(k,d)=>drafts[c.id+'.'+k]!==undefined?drafts[c.id+'.'+k]:d,set=k=>e=>{drafts[c.id+'.'+k]=e.target.value};
       const ti=h('input',{id:'e-t-'+c.id,oninput:set('t')});ti.value=dk('t',c.titel||'');
       const st=h('select',{id:'e-s-'+c.id,onchange:set('s')},Object.keys(STATUS).map(k=>h('option',{value:k,selected:k===dk('s',status(c))},STATUS[k])));
       const ha=h('select',{id:'e-a-'+c.id,onchange:set('a')},[['','Kein Hinweis'],['warn','Hinweis'],['crit','Frist oder Termin vorbei']].map(([k,l])=>h('option',{value:k,selected:k===dk('a',c.hinweisArt||'')},l)));
       const ht=h('textarea',{id:'e-h-'+c.id,style:'min-height:64px',oninput:set('h')});ht.value=dk('h',c.hinweisText||'');
-      el.append(h('div',{class:'raster'},h('label',{class:'feld breit'},'Titel',ti),h('label',{class:'feld'},'Status',st),h('label',{class:'feld'},'Hinweisart',ha),h('label',{class:'feld breit'},'Hinweistext (z. B. abgelaufene Frist, offene Prüfung)',ht)),
+      body.append(h('div',{class:'raster'},h('label',{class:'feld breit'},'Titel',ti),h('label',{class:'feld'},'Status',st),h('label',{class:'feld'},'Hinweisart',ha),h('label',{class:'feld breit'},'Hinweistext (z. B. abgelaufene Frist, offene Prüfung)',ht)),
         h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:async()=>{
           const ok=await upd(c,{titel:(dk('t',c.titel)||'').trim()||c.titel,status:dk('s',status(c)),hinweisArt:dk('a',c.hinweisArt||''),hinweisText:(dk('h',c.hinweisText||'')||'').trim()},'Gespeichert.');
           if(ok)['t','s','a','h'].forEach(k=>delete drafts[c.id+'.'+k])}},'Änderungen speichern')));
     }
   }
-  if(status(c)!=='beobachtung')el.append(textBadge(c));
-  if(textOpen.has(c.id))el.append(textPanel(c));
+  if(status(c)!=='beobachtung')body.append(textBadge(c));
+  if(textOpen.has(c.id))body.append(textPanel(c));
   if(canWrite!==false&&status(c)!=='beobachtung'){
-    el.append(h('div',{class:'knoepfe'},aktiv().map(a=>h('button',{class:'btn',type:'button',onclick:()=>zuordnen(c,a.id)},'In Ausgabe '+a.name.replace(/\s*\d{4}$/,'')))));
-  }else if(status(c)==='beobachtung')el.append(h('div',{class:'muted'},'Beobachtung, kein Newsletterthema.'));
-  el.append(h('div',{class:'knoepfe'},status(c)!=='beobachtung'?textToggle(c):null,h('button',{class:'btn',type:'button','aria-expanded':String(isOpen),onclick:flip},isOpen?'Weniger anzeigen':'Details'),
+    body.append(h('div',{class:'knoepfe'},aktiv().map(a=>h('button',{class:'btn',type:'button',onclick:()=>zuordnen(c,a.id)},'In Ausgabe '+a.name.replace(/\s*\d{4}$/,'')))));
+  }else if(status(c)==='beobachtung')body.append(h('div',{class:'muted'},'Beobachtung, kein Newsletterthema.'));
+  body.append(h('div',{class:'knoepfe'},status(c)!=='beobachtung'?textToggle(c):null,h('button',{class:'btn',type:'button','aria-expanded':String(isOpen),onclick:flip},isOpen?'Weniger anzeigen':'Details'),
+    canWrite===false?null:h('button',{class:'btn',type:'button',onclick:()=>duplizieren(c,'')},'Duplizieren'),
     canWrite===false?null:delIds.has(c.id)?[h('button',{class:'btn danger',type:'button',onclick:()=>loeschen(c)},'Wirklich löschen'),h('button',{class:'btn',type:'button',onclick:()=>{delIds.delete(c.id);render()}},'Abbrechen')]:
       h('button',{class:'btn danger',type:'button',onclick:()=>{delIds.add(c.id);render()}},'Löschen')));
+  el.append(body);
   return el;
 }
 /* Ausgabe-Status (Feld `phase` in `ausgaben`): beginnt mit dem ersten zugeordneten Thema, unabhängig vom Sammeln im Eingangskorb.
@@ -466,12 +531,11 @@ function htmlPanel(a){
     h('p',{class:'muted',style:'margin:0'},'Entsteht aus dem gespeicherten Gesamttext, den kategorisierten Abschnitten und der Terminliste. Der Abmeldelink ist der Platzhalter '+NL_FUSS.abmelden+' des Versandtools.'),
     h('iframe',{title:'Vorschau des Newsletters',sandbox:'',srcdoc:html,style:'width:'+(mob?'375px':'100%')+';max-width:100%;height:680px;border:1px solid var(--line);background:#fff'}));
 }
-const aZu=new Set((()=>{try{return JSON.parse(lsGet('nl.zu')||'[]')}catch(e){return[]}})());
+const aToggle=id=>{aZu.has(id)?aZu.delete(id):aZu.add(id);lsSet('nl.azu',[...aZu].join(','));render()};
 function ausgabePanel(a){
   const l=inAusgabe(a.id),warnN=l.filter(x=>x.hinweisText).length,zu=aZu.has(a.id);
-  const klapp=()=>{zu?aZu.delete(a.id):aZu.add(a.id);lsSet('nl.zu',JSON.stringify([...aZu]));render()};
   return h('div',{class:'ausgabe'},
-    h('div',{class:'kopf2 klapp',role:'button',tabindex:'0','aria-expanded':String(!zu),title:zu?'Ausgabe aufklappen':'Ausgabe einklappen',onclick:klapp,onkeydown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();klapp()}}},h('span',{class:'pfeil','aria-hidden':'true'},zu?'▸':'▾'),h('h2',{},'Ausgabe '+a.name),h('div',{class:'muted'},(a.versanddatum?'Versand '+datTag(a.versanddatum)+(a.versandzeit?', '+a.versandzeit+' Uhr':'')+' · ':'Termin offen · ')+l.length+(l.length===1?' Thema':' Themen')+' · '+warnN+' mit Hinweis · '+l.filter(x=>x.tb&&x.tb.freigegeben).length+' Texte freigegeben'+(phaseOf(a)?' · Status: '+phaseLabel(phaseOf(a)):'')),phaseOf(a)?phaseLeiste(a):null),
+    h('div',{class:'kopf2 klapp'},h('button',{class:'klappknopf',type:'button','aria-expanded':String(!zu),'aria-label':(zu?'Ausgabe aufklappen: ':'Ausgabe zuklappen: ')+a.name,onclick:()=>aToggle(a.id)},h('span',{class:'pfeil','aria-hidden':'true'},zu?'▸':'▾'),h('h2',{},'Ausgabe '+a.name)),h('div',{class:'muted'},(a.versanddatum?'Versand '+datTag(a.versanddatum)+(a.versandzeit?', '+a.versandzeit+' Uhr':'')+' · ':'Termin offen · ')+l.length+(l.length===1?' Thema':' Themen')+' · '+warnN+' mit Hinweis · '+l.filter(x=>x.tb&&x.tb.freigegeben).length+' Texte freigegeben'+(phaseOf(a)?' · Status: '+phaseLabel(phaseOf(a)):'')),phaseOf(a)?phaseLeiste(a):null),
     zu?null:h('div',{class:'inhalt'},
       phaseKnoepfe(a),
       delIds.has('v-'+a.id)&&canWrite!==false?versandForm(a):null,
@@ -491,7 +555,15 @@ function ausgabePanel(a){
         textOpen.has(c.id)?textPanel(c):null,
         h('div',{class:'knoepfe'},textToggle(c),
           canWrite===false?null:h('button',{class:'btn',type:'button',disabled:i===0,onclick:()=>hoch(c)},'Nach oben'),
-          canWrite===false?null:h('button',{class:'btn',type:'button',onclick:()=>freigeben(c)},'Zurück in den Eingangskorb')))})));
+          canWrite===false?null:h('button',{class:'btn',type:'button',onclick:()=>freigeben(c)},'Zurück in den Eingangskorb')),
+        canWrite===false?null:dupZeile(c,a))})));
+}
+/* Duplizieren in eine andere Ausgabe (Vorauswahl: die nächste nach Versandtermin) oder in den Eingangskorb */
+function dupZeile(c,a){
+  const ziele=aktiv().filter(x=>x.id!==a.id).sort(ausSort),nx=naechsteAusgabe(a.id),k='dup.'+c.id;
+  const sel=h('select',{id:'dup-'+c.id,'aria-label':'Ziel zum Duplizieren',onchange:e=>{drafts[k]=e.target.value}},ziele.map(x=>h('option',{value:x.id,selected:x.id===(drafts[k]||(nx&&nx.id))},x.name+(x.versanddatum?' ('+fmtD.format(new Date(x.versanddatum+'T12:00:00'))+')':''))),h('option',{value:'',selected:drafts[k]===''},'Eingangskorb'));
+  return h('div',{class:'zeile'},h('label',{class:'feld',style:'margin:0;flex:1 1 200px'},'Thema duplizieren nach',sel),
+    h('button',{class:'btn',type:'button',style:'align-self:flex-end',onclick:()=>duplizieren(c,drafts[k]!==undefined?drafts[k]:(nx?nx.id:''))},'Duplizieren'));
 }
 /* ---- Wünsche: Ideen zur Weiterentwicklung des Dashboards (Logik wie im Sekretariat-Dashboard) ----
    Sammlung `wuensche`: text, von, bereich, status (offen | ausgearbeitet | geprueft | erledigt | geschlossen), story, kriterien, erfolgsmass,
@@ -499,8 +571,9 @@ function ausgabePanel(a){
 const PERSONEN=['Andreas','Moritz'];
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+const aZu=new Set((lsGet('nl.azu')||'').split(',').filter(Boolean));
 let me=PERSONEN.includes(lsGet('nl.me'))?lsGet('nl.me'):'';
-const VIEWS=['eingang','termine','archiv','wuensche'];
+const VIEWS=['chat','eingang','termine','archiv','wuensche'];
 let view=VIEWS.includes(lsGet('nl.view'))?lsGet('nl.view'):'eingang';
 let wunsch=[],wLoaded=false,wLoadError='',wFilter=lsGet('nl.wfilter')||'offen',wq='',wForm=false,wSaving=false;
 const wCard=new Set(),wHist=new Set(),wEdit=new Set(),wBusy=new Set(),wCtl={},wPr={},wPrBusy=new Set(),wPrCtl={};
@@ -526,8 +599,8 @@ const wLabel=o=>o?'Wunsch von '+(o.von||'unbekannt')+': '+String(o.text||'').rep
 const ART={dafuer:'spricht dafür',dagegen:'spricht dagegen',zusammen:'zusammen umsetzen'};
 const wBereich=()=>'Newsletter';
 const ABLAEUFE="- Eingangskorb: Quellen (Mail, Datei, Web, Notiz) werden von Hand erfasst oder per Mailabruf angelegt. Status `vorschlag`, `kandidat`, `beobachtung`. Mailabruf täglich 23:45 Uhr (Europe/Berlin), liest nur Mails an `aschumann.bdkep+news@gmail.com` (Gmail nur lesen, nie senden, löschen, verschieben, als gelesen markieren), legt `quellen/m-<Gmail-ID>` an, keine Doppelten.\n"+
-"- Ausgaben und Zuordnung: Quellen werden per Knopf einer Ausgabe zugeordnet (`ausgabe`, `position`) oder zurück in den Eingangskorb gelegt. Die Reihenfolge in der Ausgabe bestimmt die Reihenfolge im Newsletter. Beobachtungen sind keine Newsletterthemen.\n"+
-"- Textbausteine: Je Quelle ein Newsletter-Text (Überschrift, Kurztext, Link-Text). Der Textbereich steht im Eingangskorb und in der Ausgabe (Knopf „Text schreiben“) und wandert als Teil der Quelle mit, wenn sie einer Ausgabe zugeordnet oder zurückgelegt wird. Vorschlag per Claude nur nach Klick auf \"Jetzt senden\" mit Vorschau der gesendeten Daten, der Absender der Mail geht nicht mit. Der Vorschlag wird nie automatisch gespeichert oder freigegeben. Jede Speicherung setzt die Freigabe zurück, frühere Fassungen bleiben (höchstens 20). Zeichenumfang je Thema einstellbar (`zeichen`, Standard 450, 100 bis 3000, Toleranz ±10 %), ergänzende Angaben (`ergaenzung`) gehen mit. Reichen die Angaben der Quelle nicht, liefert Claude statt eines Textes Rückfragen (`rueckfragen`, höchstens 5), die im Thema angezeigt werden. Stilbeispiele: als Stilvorbild markierte Archiv-Newsletter, sonst die drei jüngsten, je die zwei Abschnitte mit der Länge nächst dem Zielumfang. Stilvorgaben in `style.md`: sachlich, keine Werbesprache, keine rhetorischen Fragen, Angaben nur aus der Quelle, fehlende als `[Angabe fehlt]`.\n"+
+"- Ausgaben und Zuordnung: Quellen werden per Knopf einer Ausgabe zugeordnet (`ausgabe`, `position`) oder zurück in den Eingangskorb gelegt. Die Reihenfolge in der Ausgabe bestimmt die Reihenfolge im Newsletter. Ausgaben lassen sich zuklappen (nur Ansicht, im Browser gemerkt, ändert keine Daten). Beobachtungen sind keine Newsletterthemen.\n"+
+"- Textbausteine: Je Quelle ein Newsletter-Text (Überschrift, Kurztext, Link-Text). Der Textbereich steht im Eingangskorb und in der Ausgabe (Knopf „Text schreiben“) und wandert als Teil der Quelle mit, wenn sie einer Ausgabe zugeordnet oder zurückgelegt wird. Vorschlag per Claude nur nach Klick auf \"Jetzt senden\" mit Vorschau der gesendeten Daten, der Absender der Mail geht nicht mit. Der Vorschlag wird nie automatisch gespeichert oder freigegeben. Jede Speicherung setzt die Freigabe zurück, frühere Fassungen bleiben (höchstens 20). Zeichenumfang je Thema einstellbar (`zeichen`, Standard 450, 100 bis 3000, Toleranz ±10 %), ergänzende Angaben (`ergaenzung`) gehen mit. Reichen die Angaben der Quelle nicht, liefert Claude statt eines Textes Rückfragen (`rueckfragen`, höchstens 5), die im Thema angezeigt werden. Stilbeispiele: als Stilvorbild markierte Archiv-Newsletter, sonst die drei jüngsten, je die zwei Abschnitte mit der Länge nächst dem Zielumfang. Thema duplizieren: im Eingangskorb (Knopf „Duplizieren“, Kopie landet im Eingangskorb) und in der Ausgabe (Auswahl der Zielausgabe, Vorauswahl die nächste nach Versandtermin, oder Eingangskorb). Die Kopie ist eine neue Quelle (`h-<Zeit>`, `quelle` = `kopie`, `dupliziertVon`), nimmt Quelldaten und Text mit, der Text bleibt Entwurf (nie freigegeben), Versionen und Rückfragen werden nicht kopiert, Hinweis zur Aktualitätsprüfung wird gesetzt. Das Original bleibt unverändert, die Kopie zählt nicht als Mailabruf. Stilvorgaben in `style.md`: sachlich, keine Werbesprache, keine rhetorischen Fragen, Angaben nur aus der Quelle, fehlende als `[Angabe fehlt]`.\n"+
 "- Export: Kopieren des Textes der Ausgabe ist da, Vorschau und HTML-Export folgen (Stufe 5), Prüfung in Stufe 6. Der Export enthält nur freigegebene Texte, keine internen Hinweise und Quelldaten.\n"+
 "- Design: Farben, Schrift und Logos kommen aus `design/`, das Dashboard erfindet kein Design.\n"+
 "- Wünsche: Sammlung `wuensche`. Status `offen`, `ausgearbeitet`, `geprueft` (Einbauprüfung gespeichert), `erledigt`, `geschlossen` (nicht umgesetzt; geschlossene Wünsche zählen bei der Einbauprüfung nicht mit). Ausarbeitung (Story, Kriterien, Erfolgsmaß) bestätigt der Autor. Danach ist \"Einbau prüfen\" der feste nächste Schritt; ein ausgearbeiteter Wunsch wird erst nach gespeicherter Einbauprüfung erledigt. Ändert sich die Ausarbeitung, entfällt die Prüfung. Nach Erledigt beantwortet der Autor \"Bewährt?\". Ein Wunsch wird von einer Person erledigt, nie vom Agenten.\n"+
@@ -1179,23 +1252,244 @@ function termineView(){
 const kpT=()=>{const h0=heuteBerlin(),n=aktiv().filter(a=>a.versanddatum&&a.versanddatum>=h0).sort((x,y)=>x.versanddatum.localeCompare(y.versanddatum))[0];
   return[[aktiv().length,'Ausgaben in Planung'],[n?fmtD.format(new Date(n.versanddatum+'T12:00:00')):'–','Nächster Versand'],[aktiv().filter(a=>!a.versanddatum).length,'Ohne Termin'],[aktiv().filter(a=>a.versanddatum&&a.versanddatum<h0).length,'Termin überschritten']]};
 const kpA=()=>[[archiv.length,'Newsletter im Archiv'],[archiv.reduce((s,n)=>s+abschnitteOf(n).length,0),'Abschnitte'],[archiv.filter(n=>n.stilvorbild).length,'Stilvorbilder']];
+/* ---- Chat: ein gemeinsamer Verlauf für Andreas und Moritz (Logik wie im Sekretariat, ohne Bezug auf Einträge) ----
+   Sammlung `chat`, je Nachricht: text, von, wann, erwaehnt (Namen), thread (ID der ersten Nachricht, wenn es eine Antwort ist, sonst leer), angelegt.
+   Nachrichten werden nur angelegt, nie geändert. Antworten stehen wie in Slack eingerückt unter der ersten Nachricht.
+   Sammlung `chatGelesen`: ein Dokument je Person (ID = Name), bis = Zeit der letzten gelesenen Nachricht.
+   Gelesen gilt, sobald die Person den Reiter ansieht; die Linie "Neu seit deinem letzten Besuch" bleibt bis zum Verlassen des Reiters stehen. */
+let chat=[],chatLoaded=false,chatLoadError='',chatGel={},chatGelLoaded=false,chatFilter='alle',chatQ='',chatLimit=100;
+let chatEntry=null,chatSaving=false,chatStick=true,chatScroll=0,chatSprung=false,chatRefocus='',chatGelSaving='',erwSel=0;
+let chatIdx=new Map(),chatRep=new Map();
+const thOpen=new Set(),thForm=new Set();
+const ymdF=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin'});
+const fmtUhr=new Intl.DateTimeFormat('de-DE',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'});
+const fmtTagLang=new Intl.DateTimeFormat('de-DE',{weekday:'long',day:'numeric',month:'long',timeZone:'Europe/Berlin'});
+const dayKey=v=>{const d=new Date(v);return v&&!isNaN(d)?ymdF.format(d):''};
+const nachZeit=(a,b)=>(a.wann||'').localeCompare(b.wann||'')||String(a.id).localeCompare(String(b.id));
+const ck=(key,k)=>'chat.'+k+(key?'@'+key:'');
+const istAntwort=m=>!!m.thread&&chatIdx.has(m.thread);
+function chatIndex(){
+  chatIdx=new Map(chat.map(m=>[m.id,m]));chatRep=new Map();
+  chat.filter(istAntwort).sort(nachZeit).forEach(m=>{if(!chatRep.has(m.thread))chatRep.set(m.thread,[]);chatRep.get(m.thread).push(m)});
+}
+const chatBis=()=>(chatGel[me]||{}).bis||'';
+/* Für mich: ich bin erwähnt, oder es ist eine Antwort auf meine Nachricht */
+const chatFuerMich=m=>!!me&&m.von!==me&&((Array.isArray(m.erwaehnt)&&m.erwaehnt.includes(me))||(istAntwort(m)&&chatIdx.get(m.thread).von===me));
+const chatUngelesen=m=>!!me&&m.von!==me&&(m.wann||'')>chatBis();
+/* Filter zählen Unterhaltungen (erste Nachricht mit ihren Antworten), der Reiter zählt einzelne neue Nachrichten */
+function chatStats(){
+  const s={alle:0,fuermich:0,neu:0,neuFuerMich:0};
+  chat.forEach(m=>{
+    if(chatUngelesen(m)){s.neu++;if(chatFuerMich(m))s.neuFuerMich++}
+    if(istAntwort(m))return;
+    s.alle++;
+    if([m].concat(chatRep.get(m.id)||[]).some(chatFuerMich))s.fuermich++;
+  });
+  return s;
+}
+const ERW_RE=new RegExp('@('+PERSONEN.join('|')+'|alle)(?![\\p{L}\\d])','giu');
+function erwaehnteIn(text){
+  const n=new Set();
+  for(const x of String(text).matchAll(ERW_RE)){const w=x[1].toLowerCase();if(w==='alle')PERSONEN.forEach(p=>n.add(p));else n.add(PERSONEN.find(p=>p.toLowerCase()===w))}
+  n.delete(me);return [...n];
+}
+function chatTextKnoten(text){
+  const out=[];let last=0;
+  for(const x of String(text).matchAll(ERW_RE)){
+    if(x.index>last)out.push(text.slice(last,x.index));
+    const w=x[1].toLowerCase(),ich=w==='alle'||w===String(me).toLowerCase();
+    out.push(h('span',{class:'at'+(ich?' ich':'')},x[0]));
+    last=x.index+x[0].length;
+  }
+  if(last<text.length)out.push(text.slice(last));
+  return out;
+}
+function visibleChat(){
+  const needle=chatQ.trim().toLowerCase();
+  const passt=m=>[m.text,m.von].join(' ').toLowerCase().includes(needle);
+  return chat.filter(m=>!istAntwort(m)).filter(r=>{
+    const th=[r].concat(chatRep.get(r.id)||[]);
+    return (chatFilter==='fuermich'?th.some(chatFuerMich):true)&&(!needle||th.some(passt));
+  }).sort(nachZeit);
+}
+function chatTagText(key,v){
+  const heute=ymdF.format(new Date()),gestern=ymdF.format(new Date(Date.now()-864e5));
+  if(!key)return 'Ohne Datum';
+  if(key===heute)return 'Heute';
+  if(key===gestern)return 'Gestern';
+  return fmtTagLang.format(new Date(v))+(key.slice(0,4)!==heute.slice(0,4)?' '+key.slice(0,4):'');
+}
+const zeitKurz=v=>!v?'':dayKey(v)===ymdF.format(new Date())?fmtUhr.format(new Date(v)):fmt(v);
+function chatNachricht(m,root){
+  const neuHier=chatEntry&&m.von!==me&&(m.wann||'')>chatEntry.bis,fm=chatFuerMich(m)&&neuHier;
+  const rootId=root?root.id:m.id;
+  return h('li',{class:'chat-m'+(root?' antwort':'')+(fm?' fuer':''),id:'chat-'+m.id},
+    h('span',{class:'chat-av p-'+m.von,'aria-hidden':'true'},String(m.von||'?').slice(0,2).toUpperCase()),
+    h('div',{class:'chat-k'},
+      h('div',{class:'chat-meta'},h('b',{},m.von||'?'),h('span',{class:'t'},m.wann?(root?zeitKurz(m.wann):fmtUhr.format(new Date(m.wann))):''),fm?h('span',{class:'pill neu'},'für dich'):null,
+        canWrite!==false&&me?h('button',{class:'btn small',type:'button','aria-label':'Antworten auf die Nachricht von '+(root?root.von:m.von||''),onclick:()=>chatThreadAuf(rootId)},'Antworten'):null),
+      h('p',{class:'chat-text'},chatTextKnoten(m.text||''))));
+}
+function chatThread(r){
+  const rep=chatRep.get(r.id)||[],offen=thOpen.has(r.id),out=[];
+  if(rep.length){
+    const neuN=rep.filter(m=>chatEntry&&m.von!==me&&(m.wann||'')>chatEntry.bis).length;
+    out.push(h('li',{class:'chat-th-sum'},h('button',{class:'chat-th-btn',type:'button','aria-expanded':String(offen),
+        onclick:()=>{offen?thOpen.delete(r.id):thOpen.add(r.id);chatStick=false;render()}},
+      [...new Set(rep.map(m=>m.von))].map(p=>h('span',{class:'chat-av mini p-'+p,'aria-hidden':'true'},String(p).slice(0,2).toUpperCase())),
+      h('span',{},rep.length+(rep.length===1?' Antwort':' Antworten')),
+      neuN?h('span',{class:'pill neu'},neuN+' neu'):null,
+      h('span',{class:'t'},offen?'ausblenden':'zuletzt '+zeitKurz(rep[rep.length-1].wann)))));
+  }
+  if(offen){
+    let ziel=false;
+    rep.forEach(m=>{
+      const li=chatNachricht(m,r);
+      if(!ziel&&chatEntry&&m.von!==me&&(m.wann||'')>chatEntry.bis){ziel=true;li.classList.add('neu-ziel')}
+      out.push(li);
+    });
+    if(canWrite!==false&&me&&thForm.has(r.id))out.push(h('li',{class:'chat-th-form'},chatForm(r)));
+  }
+  return out;
+}
+function fillChat(box){
+  box.replaceChildren();
+  const list=visibleChat();
+  if(!chatLoaded&&!chatLoadError){box.append(h('li',{class:'chat-leer'},h('b',{},'Lade Nachrichten …')));return}
+  if(!chat.length){box.append(h('li',{class:'chat-leer'},h('b',{},'Noch keine Nachrichten'),'Schreibe unten die erste Nachricht. Andreas und Moritz sehen sie sofort.'));return}
+  if(!list.length){box.append(h('li',{class:'chat-leer'},h('b',{},'Nichts in dieser Ansicht'),chatQ.trim()?'Zu "'+chatQ.trim()+'" gibt es keinen Treffer in diesem Filter.':'Wähle oben einen anderen Filter.'));return}
+  const zeig=list.slice(-chatLimit);
+  if(list.length>zeig.length)box.append(h('li',{style:'align-self:center'},h('button',{class:'btn small',type:'button',onclick:()=>{chatLimit+=100;chatStick=false;render()}},'Ältere Nachrichten anzeigen ('+(list.length-zeig.length)+')')));
+  let tag='',linie=false;
+  zeig.forEach(m=>{
+    const k=dayKey(m.wann);
+    if(!linie&&chatEntry&&m.von!==me&&(m.wann||'')>chatEntry.bis){linie=true;box.append(h('li',{class:'chat-neu neu-ziel',id:'chat-neu'},h('span',{class:'pill neu'},'Neu seit deinem letzten Besuch')))}
+    if(k!==tag){tag=k;box.append(h('li',{class:'chat-tag'},chatTagText(k,m.wann)))}
+    box.append(chatNachricht(m));
+    chatThread(m).forEach(x=>box.append(x));
+  });
+}
+function chatScrollen(box){
+  requestAnimationFrame(()=>{
+    if(!box.isConnected)return;
+    const neu=chatSprung&&box.querySelector('.neu-ziel');
+    if(neu)box.scrollTop=Math.max(0,neu.offsetTop-box.offsetTop-8);
+    else box.scrollTop=chatStick?box.scrollHeight:chatScroll;
+    chatSprung=false;
+    const a=document.activeElement;
+    if(a&&box.contains(a)){const r=(a.closest('li')||a).getBoundingClientRect(),bb=box.getBoundingClientRect();if(r.bottom>bb.bottom)box.scrollTop+=r.bottom-bb.bottom+8;else if(r.top<bb.top)box.scrollTop-=bb.top-r.top+8}
+    chatScroll=box.scrollTop;chatStick=box.scrollTop+box.clientHeight>=box.scrollHeight-24;
+  });
+}
+async function chatGelesenSetzen(){
+  if(!db||canWrite===false||!me||view!=='chat'||!chatGelLoaded||document.visibilityState==='hidden')return;
+  const last=chat.filter(m=>m.von!==me).reduce((x,m)=>(m.wann||'')>x?m.wann:x,'');
+  if(!last||last<=chatBis()||chatGelSaving===last)return;
+  chatGelSaving=last;
+  try{await db.doc('chatGelesen/'+me).set({person:me,bis:last,geaendert:nowIso()})}catch(e){chatGelSaving=''}
+}
+function chatThreadAuf(rootId){
+  thOpen.add(rootId);thForm.add(rootId);chatStick=false;chatRefocus='chat-th-'+rootId;render();
+}
+async function chatSenden(root){
+  const key=root?root.id:'',text=(drafts[ck(key,'text')]||'').trim();
+  if(!me)return toast('Bitte oben zuerst auswählen, wer du bist.');
+  if(!text)return toast('Bitte eine Nachricht schreiben.');
+  if(!db)return toast('Die Datenbank ist nicht erreichbar.');
+  if(chatSaving)return;
+  chatSaving=true;
+  const id='ch-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t=nowIso();
+  const doc={text,von:me,wann:t,erwaehnt:erwaehnteIn(text),thread:key,angelegt:t};
+  delete drafts[ck(key,'text')];
+  if(root){thOpen.add(key);chatStick=false}else chatStick=true;
+  chatRefocus=root?'chat-th-'+key:'chat-text';render();
+  try{await db.doc('chat/'+id).set(doc)}
+  catch(e){drafts[ck(key,'text')]=text;toast('Senden nicht möglich. Dein Text ist noch da, bitte noch einmal versuchen.',6000)}
+  finally{chatSaving=false}
+}
+const enterSendet=()=>!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
+function erwOptionen(ta){
+  const m=ta.value.slice(0,ta.selectionStart).match(/(^|\s)@(\p{L}*)$/u);
+  if(!m)return [];
+  const q=m[2].toLowerCase();
+  return PERSONEN.filter(n=>n!==me).concat(['alle']).filter(n=>n.toLowerCase().startsWith(q));
+}
+function erwZeigen(ta,box){
+  const opts=erwOptionen(ta);
+  box.hidden=!opts.length;
+  erwSel=Math.min(erwSel,Math.max(opts.length-1,0));
+  box.replaceChildren(...opts.map((n,i)=>h('button',{type:'button',role:'option','aria-selected':String(i===erwSel),onmousedown:e=>e.preventDefault(),onclick:()=>erwEinsetzen(ta,box,n)},n==='alle'?'alle (Andreas und Moritz)':n)));
+  return opts;
+}
+function erwEinsetzen(ta,box,n){
+  const pos=ta.selectionStart,vor=ta.value.slice(0,pos).replace(/@\p{L}*$/u,'@'+n+' ');
+  ta.value=vor+ta.value.slice(pos);ta.dispatchEvent(new Event('input'));
+  ta.focus();ta.setSelectionRange(vor.length,vor.length);
+  erwSel=0;box.hidden=true;box.replaceChildren();
+}
+function chatForm(root){
+  const key=root?root.id:'';
+  const erw=h('div',{class:'chat-erw',role:'listbox','aria-label':'Person ansprechen',hidden:true});
+  const ta=h('textarea',{id:root?'chat-th-'+key:'chat-text','aria-label':root?'Antwort an '+(root.von||''):'Nachricht',rows:root?'2':'3',
+    placeholder:root?'Antworten … mit @ eine Person ansprechen':'Nachricht schreiben … mit @ eine Person ansprechen',
+    oninput:e=>{drafts[ck(key,'text')]=e.target.value;if(e.isTrusted){erwSel=0;erwZeigen(e.target,erw)}},
+    onkeydown:e=>{
+      if(!erw.hidden){
+        const opts=erwOptionen(ta);
+        if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();erwSel=(erwSel+(e.key==='ArrowDown'?1:opts.length-1))%opts.length;erwZeigen(ta,erw);return}
+        if((e.key==='Enter'||e.key==='Tab')&&opts.length){e.preventDefault();erwEinsetzen(ta,erw,opts[erwSel]);return}
+        if(e.key==='Escape'){e.preventDefault();erw.hidden=true;return}
+      }
+      if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&enterSendet()){e.preventDefault();ta.blur();chatSenden(root)}
+    },
+    onblur:()=>{erw.hidden=true}});
+  ta.value=drafts[ck(key,'text')]||'';
+  const senden=h('button',{class:'btn small primary',type:'button',disabled:chatSaving,onmousedown:e=>e.preventDefault(),onclick:()=>{ta.blur();chatSenden(root)}},root?'Antworten':'Senden');
+  if(root)return h('div',{class:'chat-form th'},erw,ta,h('div',{class:'zr',style:'justify-content:flex-end'},
+    h('button',{class:'btn small',type:'button',onclick:()=>{thForm.delete(key);if(!(chatRep.get(key)||[]).length)thOpen.delete(key);chatStick=false;render()}},'Schließen'),senden));
+  return h('div',{class:'chat-form'},erw,ta,
+    h('div',{class:'zr'},
+      h('span',{class:'muted',style:'font-size:13px'},'Sichtbar für Andreas und Moritz.'+(enterSendet()?' Enter sendet, Umschalt und Enter für eine neue Zeile.':'')),
+      senden));
+}
+function chatMain(){
+  const s=chatStats(),FL=[['alle','Alle ('+s.alle+')'],['fuermich','Für mich ('+s.fuermich+')']];
+  const box=h('ol',{class:'chat-list',id:'chatlist','aria-label':'Nachrichten',onscroll:e=>{const x=e.currentTarget;chatScroll=x.scrollTop;chatStick=x.scrollTop+x.clientHeight>=x.scrollHeight-24}});
+  fillChat(box);
+  const q=h('input',{id:'chatsuche',type:'search',placeholder:'Nachrichten durchsuchen','aria-label':'Chat durchsuchen',value:chatQ,oninput:e=>{chatQ=e.target.value;chatStick=true;const b=document.getElementById('chatlist');fillChat(b);chatScrollen(b)}});
+  const m=h('main',{class:'gutter chat-wrap'},
+    chatLoadError?h('div',{class:'warn crit',role:'alert'},chatLoadError):null,
+    !me?h('div',{class:'warn warn-k'},'Wähle oben bei „Ich bin“ deinen Namen, um zu schreiben und neue Nachrichten als gelesen zu markieren.'):null,
+    h('div',{class:'chips',role:'group','aria-label':'Filter Chat'},FL.map(([k,t])=>h('button',{class:'btn'+(chatFilter===k?' on':''),type:'button','aria-pressed':String(chatFilter===k),onclick:()=>{chatFilter=k;chatStick=true;render()}},t))),
+    h('div',{class:'chat-suche'},q),
+    h('section',{class:'chat','aria-label':'Chat'},box,
+      canWrite===false?h('p',{class:'muted',style:'padding:12px 16px;margin:0;font-size:13px'},'Zum Schreiben braucht die Seite für dich die Stufe "Contributor".'):me?chatForm():null));
+  chatScrollen(box);
+  setTimeout(chatGelesenSetzen,0);
+  return m;
+}
 function render(){
   const a=document.activeElement,id=a&&a.id,pos=a&&a.selectionStart,sc=document.querySelector('.liste'),st=sc?sc.scrollTop:0;
   const app=document.getElementById('app');app.textContent='';
+  if(view!=='chat'||!me)chatEntry=null;
+  else if(chatLoaded&&chatGelLoaded&&(!chatEntry||chatEntry.me!==me)){
+    chatEntry={me,bis:chatBis()};chatStick=true;chatSprung=true;
+    chatRep.forEach((rep,id)=>{if(rep.some(m=>m.von!==me&&(m.wann||'')>chatEntry.bis))thOpen.add(id)});
+  }
   const echte=items.filter(c=>status(c)!=='beobachtung'),unz=items.filter(c=>!ausgabeId(c));
   const mails=items.filter(c=>c.quelle==='mail').map(c=>c.erfasstAm).sort(),letzter=mails.length?dat(mails[mails.length-1],true):'noch kein Abruf';
   const count=fn=>unz.filter(fn).length;
   const chips=[['alle','Alle ('+unz.length+')'],['mail','Mail ('+count(c=>c.typ==='mail')+')'],['document','Datei ('+count(c=>c.typ==='document')+')'],['link','Web ('+count(c=>c.typ==='link')+')'],['note','Notiz ('+count(c=>c.typ==='note')+')'],['beobachtung','Beobachtung ('+count(c=>status(c)==='beobachtung')+')']];
   const shown=unz.filter(c=>filter==='alle'||(filter==='beobachtung'?status(c)==='beobachtung':c.typ===filter)).sort((x,y)=>RANK[status(x)]-RANK[status(y)]||(y.erfasstAm||'').localeCompare(x.erfasstAm||''));
-  const ws=wstats(),kpW=[[aeFrei().filter(aeNeu).length,'Neue Änderungen'],[ws.fuermich,'Neu für mich'],[ws.offen,'Offene Wünsche'],[ws.erledigt,'Erledigt'],[ws.bewaehrt,'Bewährt? offen']];
+  const ws=wstats(),cs=chatStats(),kpW=[[aeFrei().filter(aeNeu).length,'Neue Änderungen'],[ws.fuermich,'Neu für mich'],[ws.offen,'Offene Wünsche'],[ws.erledigt,'Erledigt'],[ws.bewaehrt,'Bewährt? offen']];
   const kp=[[echte.filter(c=>!ausgabeId(c)).length,'Im Eingangskorb'],[echte.filter(c=>aktiv().some(a=>a.id===ausgabeId(c))).length,'Einer Ausgabe zugeordnet'],[echte.filter(c=>c.hinweisText).length,'Themen mit Hinweis'],[items.filter(c=>status(c)==='beobachtung').length,'In Beobachtung']];
   app.append(
     h('header',{class:'kopf gutter'},h('div',{},h('div',{class:'over'},'Newsletter-Redaktion'),h('h1',{},'Themen sammeln, Ausgaben planen'),h('p',{class:'sub'},'Stand '+dat(new Date().toISOString())+' · Daten aus dem Themenspeicher')),h('img',{src:LOGO_D,alt:'BdKEP'})),
     h('div',{class:'tabs gutter',role:'group','aria-label':'Bereich'},
-      [['eingang','Eingangskorb'],['termine','Versandplan'+(aktiv().length?' ('+aktiv().length+')':'')],['archiv','Archiv'+(archiv.length?' ('+archiv.length+')':'')],['wuensche','Wünsche'+(ws.fuermich?' ('+ws.fuermich+' neu für dich)':ws.offen?' ('+ws.offen+' offen)':'')]].map(([k,t])=>h('button',{class:'btn'+(view===k?' on':''),type:'button','aria-pressed':String(view===k),onclick:()=>{view=k;lsSet('nl.view',k);render()}},t)),
+      [['chat','Chat'+(cs.neu?' ('+cs.neu+' neu)':'')],['eingang','Eingangskorb'],['termine','Versandplan'+(aktiv().length?' ('+aktiv().length+')':'')],['archiv','Archiv'+(archiv.length?' ('+archiv.length+')':'')],['wuensche','Wünsche'+(ws.fuermich?' ('+ws.fuermich+' neu für dich)':ws.offen?' ('+ws.offen+' offen)':'')]].map(([k,t])=>h('button',{class:'btn'+(view===k?' on':''),type:'button','aria-pressed':String(view===k),onclick:()=>{view=k;lsSet('nl.view',k);render()}},t)),
       h('label',{class:'person'},'Ich bin',h('select',{id:'ich-bin','aria-label':'Ich bin',onchange:e=>{me=e.target.value;lsSet('nl.me',me);render()}},h('option',{value:''},'bitte wählen'),PERSONEN.map(n=>h('option',{value:n,selected:n===me},n))))),
-    h('section',{class:'kpis gutter'},(view==='wuensche'?kpW:view==='termine'?kpT():view==='archiv'?kpA():kp).map(([v,l])=>h('div',{class:'kpi'},h('div',{class:'v'},String(v)),h('div',{class:'l'},l)))),
-    view==='wuensche'?wuenscheView():view==='archiv'?archivView():view==='termine'?termineView():h('main',{class:'gutter'},
+    h('section',{class:'kpis gutter',hidden:view==='chat'},(view==='chat'?[]:view==='wuensche'?kpW:view==='termine'?kpT():view==='archiv'?kpA():kp).map(([v,l])=>h('div',{class:'kpi'},h('div',{class:'v'},String(v)),h('div',{class:'l'},l)))),
+    view==='chat'?chatMain():view==='wuensche'?wuenscheView():view==='archiv'?archivView():view==='termine'?termineView():h('main',{class:'gutter'},
       h('section',{class:'links'},
         h('div',{class:'sec-head'},
           h('div',{class:'sec-top'},h('h2',{},'Eingangskorb'),h('span',{class:'muted'},shown.length+(shown.length===1?' Eintrag':' Einträge')+' in dieser Ansicht')),
@@ -1214,10 +1508,11 @@ function render(){
           h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:neueAusgabe},'Ausgabe anlegen'),h('button',{class:'btn',type:'button',onclick:()=>{newIssue=false;render()}},'Abbrechen'))):
           h('button',{class:'btn',type:'button',style:'align-self:flex-start',onclick:()=>{newIssue=true;render()}},'Ausgabe anlegen'),
         h('p',{class:'hinweis-fuss'},'Die Reihenfolge in einer Ausgabe bestimmt die Reihenfolge im Newsletter. Vorschau und Export als HTML folgen in der nächsten Stufe.'))),
-    canWrite!==false&&!(view==='wuensche'&&wForm)?h('button',{class:'fab',type:'button','aria-label':'Wunsch eintragen',title:'Wunsch eintragen',onclick:wunschSchnell},h('span',{class:'plus','aria-hidden':'true'},'+'),h('span',{class:'txt'},'Wunsch')):null,
+    canWrite!==false&&view!=='chat'&&!(view==='wuensche'&&wForm)?h('button',{class:'fab',type:'button','aria-label':'Wunsch eintragen',title:'Wunsch eintragen',onclick:wunschSchnell},h('span',{class:'plus','aria-hidden':'true'},'💡'),h('span',{class:'txt'},'Wunsch')):null,
     toastMsg?h('div',{class:'toast',role:'status'},toastMsg):null);
   const l2=document.querySelector('.liste');if(l2)l2.scrollTop=st;
   if(id){const e=document.getElementById(id);if(e){e.focus();try{if(pos!=null)e.setSelectionRange(pos,pos)}catch(_){}}}
+  if(chatRefocus){const el=view==='chat'&&document.getElementById(chatRefocus);chatRefocus='';if(el){el.focus({preventScroll:true});el.setSelectionRange(el.value.length,el.value.length)}}
 }
 render();
 (async()=>{
@@ -1227,6 +1522,8 @@ render();
     db=await claude.use('db');
     if(!db){loaded=true;render();toast('Anmeldung nötig, um den Eingangskorb zu laden.');return}
     db.collection('quellen').onSnapshot(s=>{items=s.docs.map(d=>({id:d.id,...d.data()}));loaded=true;render()},()=>{loaded=true;toast('Eingangskorb nicht ladbar.')});
+    db.collection('chat').onSnapshot(s=>{chat=s.docs.map(d=>({id:d.id,...d.data()}));chatIndex();chatLoaded=true;chatLoadError='';render()},e=>{chatLoaded=true;chatLoadError='Der Chat kann nicht geladen werden ('+(e&&e.code||'Fehler')+').';render()});
+    db.collection('chatGelesen').onSnapshot(s=>{chatGel={};s.docs.forEach(d=>{chatGel[d.id]=d.data()});chatGelLoaded=true;render()},()=>{chatGelLoaded=true;render()});
     db.collection('wuensche').onSnapshot(s=>{wunsch=s.docs.map(d=>({id:d.id,...d.data()}));wLoaded=true;wLoadError='';render()},e=>{wLoaded=true;wLoadError='Die Wünsche können nicht geladen werden ('+(e&&e.code||'Fehler')+').';render()});
     db.collection('aenderungen').onSnapshot(s=>{aend=s.docs.map(d=>({id:d.id,...d.data()}));render()},()=>{});
     db.collection('besuche').onSnapshot(s=>{besuche={};s.docs.forEach(d=>{besuche[d.id]=d.data()});render()},()=>{});
@@ -1235,4 +1532,5 @@ render();
   }catch(e){loaded=true;render()}
 })();
 </script>
+
 

@@ -750,7 +750,7 @@ function wuenscheView(){
 }
 /* ---- Versandplan und Archiv ----
    Sammlung `ausgaben`: name, versanddatum (JJJJ-MM-TT), versandzeit (HH:MM, optional), notiz, status (planung | versendet), versendetAm, reihenfolge, angelegtAm.
-   Sammlung `archiv`: name, versanddatum, titel, einleitung, abschnitte [{ueberschrift,text,linkText,url}], abbinder, stilvorbild, notiz,
+   Sammlung `archiv`: name, versanddatum, titel, einleitung, abschnitte [{ueberschrift,text,linkText,url}], html (versendeter HTML-Code), abbinder, stilvorbild, notiz,
    quelle (import | hand | ausgabe), ausgabeId, erfasstAm. Zweck: Aufbau, Ausdruck und Grammatik vereinheitlichen, auf ältere Meldungen verweisen, Abschnitte übernehmen. */
 let archiv=[],aLoaded=false,aq='',aFilter='alle',aForm=false,termForm=false;
 const aOpen=new Set(),termEdit=new Set();
@@ -792,6 +792,26 @@ const abschnitteText=l=>l.map(a=>a.ueberschrift+'\n'+a.text+(a.url?'\n'+(a.linkT
 function abschnitteAusText(t){
   return String(t||'').replace(/\r\n/g,'\n').split(/\n\s*-{3,}\s*\n/).map(b=>b.trim()).filter(Boolean).map(b=>{const z=b.split('\n');return{ueberschrift:z[0].trim(),text:z.slice(1).join('\n').trim(),linkText:'',url:''}});
 }
+/* Versendeter HTML-Code: maßgebliches Dokument eines Archiv-Eintrags (Feld `html`). Der Block eines Artikels ist der Bereich um seine Überschrift (h2). */
+const htmlOpen=new Set();
+function blockHtml(n,a){
+  if(!n.html)return '';
+  const d=new DOMParser().parseFromString(n.html,'text/html'),norm=s=>String(s||'').replace(/\s+/g,' ').trim();
+  for(const h2 of d.querySelectorAll('h2')){
+    const c=h2.cloneNode(true);c.querySelectorAll('.n').forEach(x=>x.remove());
+    if(norm(c.textContent)===norm(a.ueberschrift))return (h2.closest('.sec')||h2.parentElement).outerHTML;
+  }
+  return '';
+}
+function htmlLaden(n){
+  const dn=(n.name||'newsletter').replace(/[^\wäöüÄÖÜß.-]+/g,'-')+(n.versanddatum?'-'+n.versanddatum:'')+'.html',u=URL.createObjectURL(new Blob([n.html],{type:'text/html'})),a=h('a',{href:u,download:dn});
+  document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);
+}
+function htmlFeld(n){
+  const k='ah.'+n.id,t=h('textarea',{id:'ah-'+n.id,'aria-label':'Versendeter HTML-Code',style:'min-height:140px',placeholder:'HTML-Code einfügen, so wie er mit dem Newsletterprogramm versendet wurde.',oninput:e=>{drafts[k]=e.target.value}});t.value=drafts[k]||'';
+  return h('div',{class:'tb'},h('h4',{},'Versendeter HTML-Code'),h('p',{class:'muted'},'Für diesen Eintrag ist noch kein HTML-Code hinterlegt.'),t,
+    h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:async()=>{const v=(drafts[k]||'').trim();if(!v)return toast('Bitte den HTML-Code einfügen.');if(await archivUpd(n,{html:v},'HTML-Code im Archiv gespeichert.'))delete drafts[k]}},'HTML speichern')));
+}
 const archivUpd=(n,p,msg)=>schreiben(()=>db.doc('archiv/'+n.id).update(p),msg);
 const archivLoeschen=n=>schreiben(async()=>{await db.doc('archiv/'+n.id).delete();delIds.delete('ar-'+n.id);aOpen.delete(n.id)},'Newsletter aus dem Archiv gelöscht.');
 async function archivAnlegen(){
@@ -800,8 +820,8 @@ async function archivAnlegen(){
   if(!datum)return toast('Bitte das Versanddatum angeben.');
   if(!ab.length)return toast('Bitte mindestens einen Abschnitt eintragen: erste Zeile Überschrift, darunter der Text.');
   const id='i-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
-  const ok=await schreiben(()=>db.doc('archiv/'+id).set({name,versanddatum:datum,titel:(drafts['arch.titel']||'').trim(),einleitung:'',abschnitte:ab,abbinder:'',stilvorbild:false,notiz:'',quelle:'import',erfasstAm:nowIso()}),'Im Archiv abgelegt.');
-  if(ok){aForm=false;['name','datum','titel','text'].forEach(k=>delete drafts['arch.'+k]);render()}
+  const ok=await schreiben(()=>db.doc('archiv/'+id).set({name,versanddatum:datum,titel:(drafts['arch.titel']||'').trim(),einleitung:'',abschnitte:ab,html:(drafts['arch.html']||'').trim(),abbinder:'',stilvorbild:false,notiz:'',quelle:'import',erfasstAm:nowIso()}),'Im Archiv abgelegt.');
+  if(ok){aForm=false;['name','datum','titel','text','html'].forEach(k=>delete drafts['arch.'+k]);render()}
 }
 /* Abschnitt als Entwurf in eine Ausgabe übernehmen: Quelle mit Text im Entwurf, nie freigegeben, mit Hinweis zur Aktualitätsprüfung */
 function uebernehmen(n,a,ausId){
@@ -833,14 +853,20 @@ function archivKarte(n){
       s.value=drafts[wk]!==undefined?drafts[wk]:(sel[0]?sel[0].id:'');
       el.append(h('div',{class:'tb'},h('h4',{},(i+1)+'. '+a.ueberschrift),h('p',{style:'white-space:pre-wrap'},a.text),
         a.url||a.linkText?h('div',{class:'meta'},(a.linkText?'Schaltfläche: '+a.linkText:'')+(a.url?(a.linkText?' · ':'')+a.url:'')):null,
-        h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:()=>copyText(a.ueberschrift+'\n'+a.text,'Abschnitt')},'Abschnitt kopieren')),
+        h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:()=>copyText(a.ueberschrift+'\n'+a.text,'Abschnitt')},'Text kopieren'),
+          n.html?h('button',{class:'btn',type:'button',onclick:()=>{const b=blockHtml(n,a);b?copyText(b,'HTML-Block'):toast('Dieser Artikel ist im HTML-Code nicht eindeutig zu finden. Bitte den gesamten HTML-Code kopieren.',6000)}},'HTML kopieren'):null),
         canAct?(sel.length?h('div',{class:'raster'},h('label',{class:'feld'},'In neue Ausgabe übernehmen',s),h('div',{style:'display:flex;align-items:flex-end'},h('button',{class:'btn primary',type:'button',onclick:()=>uebernehmen(n,a,s.value)},'Als Entwurf übernehmen'))):h('span',{class:'muted'},'Zum Übernehmen zuerst im Versandplan eine Ausgabe anlegen.')):null));
     });
+    if(!n.html&&canAct)el.append(htmlFeld(n));
+    if(n.html&&htmlOpen.has(n.id))el.append(h('div',{class:'tb'},h('h4',{},'Versendete Fassung (Vorschau)'),h('iframe',{title:'Vorschau des versendeten Newsletters',sandbox:'',srcdoc:n.html,style:'width:100%;height:560px;border:1px solid var(--line);background:#fff'})));
     if(n.abbinder)el.append(h('div',{class:'meta'},'Abbinder: '+n.abbinder));
     if(n.notiz)el.append(h('div',{class:'meta'},'Notiz: '+n.notiz));
   }
   el.append(h('div',{class:'knoepfe'},h('button',{class:'btn','aria-expanded':String(isOpen),onclick:flip},isOpen?'Weniger anzeigen':'Texte ansehen'),
     h('button',{class:'btn',type:'button',onclick:()=>copyText(archivText(n),'Newsletter')},'Newsletter kopieren'),
+    n.html?[h('button',{class:'btn',type:'button',onclick:()=>copyText(n.html,'HTML-Code')},'HTML kopieren'),
+      h('button',{class:'btn',type:'button','aria-pressed':String(htmlOpen.has(n.id)),onclick:()=>{htmlOpen.has(n.id)?htmlOpen.delete(n.id):htmlOpen.add(n.id);aOpen.add(n.id);render()}},htmlOpen.has(n.id)?'Vorschau schließen':'Versendete Fassung ansehen'),
+      h('button',{class:'btn',type:'button',onclick:()=>htmlLaden(n)},'HTML herunterladen')]:null,
     canAct?h('button',{class:'btn'+(n.stilvorbild?' on':''),type:'button','aria-pressed':String(!!n.stilvorbild),onclick:()=>archivUpd(n,{stilvorbild:!n.stilvorbild},n.stilvorbild?'Nicht mehr als Stilvorbild verwendet.':'Wird künftig als Stilvorbild für Textvorschläge verwendet.')},'Stilvorbild'):null,
     canAct?(delIds.has('ar-'+n.id)?[h('button',{class:'btn danger',type:'button',onclick:()=>archivLoeschen(n)},'Wirklich löschen'),h('button',{class:'btn',type:'button',onclick:()=>{delIds.delete('ar-'+n.id);render()}},'Abbrechen')]:
       h('button',{class:'btn danger',type:'button',onclick:()=>{delIds.add('ar-'+n.id);render()}},'Löschen')):null));
@@ -853,12 +879,13 @@ function archivView(){
   const dk=(k)=>drafts['arch.'+k]!==undefined?drafts['arch.'+k]:'';
   const fl=(k,lab,type)=>{const i=h('input',{id:'arch-'+k,type,oninput:e=>{drafts['arch.'+k]=e.target.value}});i.value=dk(k);return h('label',{class:'feld'},lab,i)};
   const tx=h('textarea',{id:'arch-text','aria-label':'Abschnitte',style:'min-height:220px',placeholder:'Je Abschnitt: erste Zeile Überschrift, darunter der Text. Abschnitte durch eine Zeile mit --- trennen.',oninput:e=>{drafts['arch.text']=e.target.value}});tx.value=dk('text');
+  const hx=h('textarea',{id:'arch-html','aria-label':'Versendeter HTML-Code',style:'min-height:120px',placeholder:'Der HTML-Code, der mit dem Newsletterprogramm verschickt wurde. Eine .html-Datei oben füllt das Feld automatisch.',oninput:e=>{drafts['arch.html']=e.target.value}});hx.value=dk('html');
   const file=h('input',{id:'arch-file',type:'file',accept:'.txt,.md,.html,.htm',onchange:async e=>{
     const f=e.target.files[0];if(!f)return;const raw=await f.text();
     if(/\.html?$/i.test(f.name)){
       const l=abschnitteAusHtml(raw);if(!l.length)return toast('Im HTML keine Überschriften (h2) gefunden. Bitte den Text einfügen.');
       const doc=new DOMParser().parseFromString(raw,'text/html'),t=(doc.querySelector('h1')||{}).textContent;
-      drafts['arch.text']=abschnitteText(l);if(t&&!drafts['arch.titel'])drafts['arch.titel']=t.replace(/\s+/g,' ').trim();
+      drafts['arch.text']=abschnitteText(l);drafts['arch.html']=raw;if(t&&!drafts['arch.titel'])drafts['arch.titel']=t.replace(/\s+/g,' ').trim();
       const m=f.name.match(/(\d{4})-(\d{2})-(\d{2})/);if(m&&!drafts['arch.datum'])drafts['arch.datum']=m[0];
       toast(l.length+' Abschnitte gelesen. Bitte prüfen, Name und Datum ergänzen und ablegen.',6000);
     }else drafts['arch.text']=raw;
@@ -873,7 +900,7 @@ function archivView(){
       st?h('div',{class:'abruf'},h('b',{},'Üblicher Aufbau'),h('span',{},'Ø '+st.abschnitte+' Abschnitte je Newsletter'),h('span',{},'Ø '+st.woerter+' Wörter je Abschnitt'),h('span',{},'Überschriften Ø '+st.ueberschrift+' Wörter')):null),
     aForm&&canAct?h('div',{class:'formular'},h('h2',{},'Newsletter ablegen'),
       h('div',{class:'raster'},fl('name','Name','text'),fl('datum','Versanddatum','date'),h('div',{class:'breit'},fl('titel','Titel oder Schwerpunkte (optional)','text')),
-        h('label',{class:'feld breit'},'Abschnitte',tx),h('label',{class:'feld breit'},'Datei lesen (.html, .txt, .md)',file)),
+        h('label',{class:'feld breit'},'Abschnitte',tx),h('label',{class:'feld breit'},'Datei lesen (.html, .txt, .md)',file),h('label',{class:'feld breit'},'Versendeter HTML-Code (wird unverändert gespeichert)',hx)),
       h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:archivAnlegen},'Im Archiv ablegen'),h('button',{class:'btn',type:'button',onclick:()=>{aForm=false;render()}},'Abbrechen'))):null,
     h('div',{class:'wliste'},
       !aLoaded?h('p',{class:'leer'},'Lade Archiv …'):null,

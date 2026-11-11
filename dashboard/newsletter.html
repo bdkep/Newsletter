@@ -342,28 +342,129 @@ function phaseKnoepfe(a){
 /* Gesamttext (Feld `gesamt` in `ausgaben`): {intro, abschnitte:[{id,ueberschrift,text,linkText,url}], erzeugtAm}. Entsteht aus den Einzeltexten und ist danach unabhängig davon bearbeitbar.
    „Auf einen Blick“ (Inhaltsverzeichnis) wird immer aus den Überschriften der Abschnitte gebildet. */
 const gesamtBauen=(a,intro)=>({intro:intro!==undefined?intro:(a.gesamt&&a.gesamt.intro)||'',erzeugtAm:nowIso(),
-  abschnitte:inAusgabe(a.id).filter(c=>c.tb&&String(c.tb.kurztext||'').trim()).map(c=>({id:c.id,ueberschrift:c.tb.ueberschrift||c.titel||'',text:c.tb.kurztext||'',linkText:c.tb.linkText||'',url:c.url||''}))});
+  abschnitte:inAusgabe(a.id).filter(c=>c.tb&&String(c.tb.kurztext||'').trim()).map(c=>({id:c.id,ueberschrift:c.tb.ueberschrift||c.titel||'',text:c.tb.kurztext||'',linkText:c.tb.linkText||'',url:c.url||'',kategorie:c.kategorie||''}))});
 const gesamtText=g=>(g.intro?g.intro+'\n\n':'')+'Auf einen Blick\n'+g.abschnitte.map(x=>'- '+x.ueberschrift).join('\n')+'\n\n'+g.abschnitte.map((x,i)=>(i+1)+'. '+x.ueberschrift+'\n'+x.text+(x.url?'\n'+(x.linkText?x.linkText+': ':'')+x.url:'')).join('\n\n');
 function gesamtPanel(a){
   const g=a.gesamt,canAct=canWrite!==false,P='gt.'+a.id+'.';
   const dv=(k,v)=>drafts[P+k]!==undefined?drafts[P+k]:v;
   const ta=(k,v,lab,hoehe)=>{const t=h('textarea',{id:'gt-'+a.id+'-'+k.replace(/\W/g,'_'),'aria-label':lab,style:'min-height:'+hoehe+'px',disabled:canAct?null:true,oninput:e=>{drafts[P+k]=e.target.value}});t.value=dv(k,v);return t};
   const neu=()=>schreiben(()=>db.doc('ausgaben/'+a.id).update({gesamt:gesamtBauen(a,g?dv('intro',g.intro):undefined)}),'Gesamttext aus den Einzeltexten erzeugt.').then(ok=>{if(ok)Object.keys(drafts).filter(k=>k.startsWith(P)&&k!==P+'intro').forEach(k=>delete drafts[k])});
-  const sp=()=>schreiben(()=>db.doc('ausgaben/'+a.id).update({gesamt:{...g,intro:dv('intro',g.intro),abschnitte:g.abschnitte.map((x,i)=>({...x,ueberschrift:dv(i+'.u',x.ueberschrift),text:dv(i+'.t',x.text)}))}}),'Gesamttext gespeichert.').then(ok=>{if(ok)Object.keys(drafts).filter(k=>k.startsWith(P)).forEach(k=>delete drafts[k])});
+  const sp=()=>schreiben(()=>db.doc('ausgaben/'+a.id).update({gesamt:{...g,intro:dv('intro',g.intro),abschnitte:g.abschnitte.map((x,i)=>({...x,ueberschrift:dv(i+'.u',x.ueberschrift),text:dv(i+'.t',x.text),kategorie:String(dv(i+'.k',x.kategorie||'')).trim()}))}}),'Gesamttext gespeichert.').then(ok=>{if(ok)Object.keys(drafts).filter(k=>k.startsWith(P)).forEach(k=>delete drafts[k])});
   if(!g)return h('div',{class:'tb'},h('h4',{},'Gesamttext'),h('p',{class:'muted'},'Noch nicht erzeugt. Aus den Einzeltexten entsteht ein gemeinsamer Text mit Intro und „Auf einen Blick“.'),
     canAct?h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:neu},'Gesamttext erzeugen')):null);
-  const ge={...g,intro:dv('intro',g.intro),abschnitte:g.abschnitte.map((x,i)=>({...x,ueberschrift:dv(i+'.u',x.ueberschrift),text:dv(i+'.t',x.text)}))};
+  const ge={...g,intro:dv('intro',g.intro),abschnitte:g.abschnitte.map((x,i)=>({...x,ueberschrift:dv(i+'.u',x.ueberschrift),text:dv(i+'.t',x.text),kategorie:String(dv(i+'.k',x.kategorie||'')).trim()}))};
+  const kf=(i,v)=>{const t=h('input',{type:'text',list:'kat-'+a.id,'aria-label':'Kategorie '+(i+1),placeholder:'Kategorie (Badge), z. B. Umfrage',disabled:canAct?null:true,style:'max-width:280px',oninput:e=>{drafts[P+i+'.k']=e.target.value}});t.value=v||'';return t};
   const ids=new Set(g.abschnitte.map(x=>x.id)),akt=inAusgabe(a.id).filter(c=>c.tb&&String(c.tb.kurztext||'').trim()).map(c=>c.id);
   const abw=akt.length!==g.abschnitte.length||akt.some((id,i)=>!ids.has(id)||g.abschnitte[i].id!==id);
   return h('div',{class:'tb'},h('h4',{},'Gesamttext'),
     abw?h('div',{class:'warn warn-k'},'Die Einzeltexte oder ihre Reihenfolge haben sich seit dem Erzeugen geändert. „Neu aus Einzeltexten“ übernimmt sie; eigene Änderungen an den Abschnitten gehen dabei verloren, das Intro bleibt.'):null,
     h('label',{class:'feld'},'Intro (Anrede und Überblick)',ta('intro',g.intro,'Intro',110)),
     h('div',{class:'abruf',style:'display:block'},h('b',{},'Auf einen Blick'),h('ul',{style:'margin:6px 0 0;padding-left:18px'},ge.abschnitte.map(x=>h('li',{},x.ueberschrift||'Ohne Überschrift')))),
-    ge.abschnitte.map((x,i)=>h('div',{class:'tb'},h('h4',{},(i+1)+'. Abschnitt'),h('label',{class:'feld'},'Überschrift',ta(i+'.u',x.ueberschrift,'Überschrift '+(i+1),48)),h('label',{class:'feld'},'Text',ta(i+'.t',x.text,'Text '+(i+1),120)),
+    ge.abschnitte.map((x,i)=>h('div',{class:'tb'},h('h4',{},(i+1)+'. Abschnitt'),h('label',{class:'feld'},'Kategorie (Badge im Newsletter)',kf(i,x.kategorie)),h('label',{class:'feld'},'Überschrift',ta(i+'.u',x.ueberschrift,'Überschrift '+(i+1),48)),h('label',{class:'feld'},'Text',ta(i+'.t',x.text,'Text '+(i+1),120)),
       x.url?h('div',{class:'meta'},(x.linkText?'Schaltfläche: '+x.linkText+' · ':'')+x.url):null)),
     h('div',{class:'knoepfe'},canAct?h('button',{class:'btn primary',type:'button',onclick:sp},'Gesamttext speichern'):null,
       h('button',{class:'btn',type:'button',onclick:()=>copyText(gesamtText(ge),'Gesamttext')},'Gesamttext kopieren'),
       canAct?h('button',{class:'btn',type:'button',onclick:neu},'Neu aus Einzeltexten'):null));
+}
+/* Kategorie je Thema (Feld `kategorie` an der Quelle): erscheint als Badge im Newsletter. Freie Eingabe mit Vorschlägen. */
+const KATEGORIEN=['Partnerangebot','Umfrage','Forschung','Regulatorik','Marktdaten','Anzeige','Veranstaltung','Mitgliedervorteil'];
+const katFarbe=k=>{k=String(k||'').toLowerCase();return /partner|anzeige|vorteil/.test(k)?'#C97C3D':/umfrage|regulat/.test(k)?'#1F3A5F':/forsch/.test(k)?'#3E7C74':'#6B6B6B'};
+const katListe=a=>h('datalist',{id:'kat-'+a.id},KATEGORIEN.map(k=>h('option',{value:k})));
+const katFeld=(c,a)=>h('label',{class:'feld'},'Kategorie (Badge im Newsletter)',h('input',{type:'text',list:'kat-'+a.id,placeholder:'z. B. Umfrage',value:c.kategorie||'',disabled:canWrite===false?true:null,style:'max-width:280px',onchange:e=>upd(c,{kategorie:e.target.value.trim()},'Kategorie gespeichert.')}));
+
+/* Terminliste je Ausgabe (Feld `termine` in `ausgaben`: [{titel,von,bis,ort,url}]). Wird aus der vorherigen Ausgabe fortgeschrieben: vergangene Termine fallen weg, neue kommen dazu. */
+const tmWork={};
+const tmEnde=t=>t.bis||t.von||'';
+const tmRef=a=>a.versanddatum||heuteBerlin();
+const tmVorbei=(t,ref)=>!!tmEnde(t)&&tmEnde(t)<ref;
+const dmy=s=>s?s.slice(8,10)+'.'+s.slice(5,7)+'.'+s.slice(0,4):'';
+const tmDatum=t=>{if(!t.von)return '';if(!t.bis||t.bis===t.von)return dmy(t.von);const v=t.von,b=t.bis;
+  return v.slice(0,4)!==b.slice(0,4)?dmy(v)+' – '+dmy(b):v.slice(0,7)===b.slice(0,7)?v.slice(8,10)+'.–'+dmy(b):v.slice(8,10)+'.'+v.slice(5,7)+'.–'+dmy(b)};
+const tmSort=l=>l.slice().sort((x,y)=>(x.von||'9999').localeCompare(y.von||'9999'));
+const tmListe=a=>tmWork[a.id]||(Array.isArray(a.termine)?a.termine:[]);
+const tmKopie=a=>tmWork[a.id]||(tmWork[a.id]=tmListe(a).map(t=>({...t})));
+function tmVorlage(a){
+  const q=[...ausgaben.filter(x=>x.id!==a.id).map(x=>({d:x.versanddatum||'',t:x.termine})),...archiv.map(x=>({d:x.versanddatum||'',t:x.termine}))]
+    .filter(x=>Array.isArray(x.t)&&x.t.length&&x.d&&(!a.versanddatum||x.d<a.versanddatum)).sort((x,y)=>y.d.localeCompare(x.d));
+  return q.length?q[0].t:[];
+}
+function tmUebernehmen(a){
+  const w=tmKopie(a),ref=tmRef(a),key=t=>(t.titel||'')+'|'+(t.von||'');let n=0;
+  tmVorlage(a).filter(t=>!tmVorbei(t,ref)).forEach(t=>{if(!w.some(x=>key(x)===key(t))){w.push({titel:t.titel||'',von:t.von||'',bis:t.bis||'',ort:t.ort||'',url:t.url||''});n++}});
+  toast(n?n+(n===1?' Termin':' Termine')+' aus der vorherigen Ausgabe übernommen. Bitte speichern.':'Keine weiteren Termine aus der vorherigen Ausgabe.');
+}
+function tmSpeichern(a){
+  const l=tmSort(tmListe(a).filter(t=>String(t.titel||'').trim()).map(t=>({titel:t.titel.trim(),von:t.von||'',bis:t.bis||'',ort:(t.ort||'').trim(),url:(t.url||'').trim()})));
+  return schreiben(()=>db.doc('ausgaben/'+a.id).update({termine:l}),'Terminliste gespeichert.').then(ok=>{if(ok){delete tmWork[a.id];render()}});
+}
+function termineBereich(a){
+  const canAct=canWrite!==false,ref=tmRef(a);
+  if(!Array.isArray(a.termine)&&!tmWork[a.id]&&canAct){const v=tmVorlage(a).filter(t=>!tmVorbei(t,ref));if(v.length)tmWork[a.id]=v.map(t=>({titel:t.titel||'',von:t.von||'',bis:t.bis||'',ort:t.ort||'',url:t.url||''}))}
+  const l=tmListe(a),dirty=!!tmWork[a.id],vorb=l.filter(t=>tmVorbei(t,ref)).length;
+  const fe=(i,k,lab,type,st)=>h('input',{type,'aria-label':lab+' '+(i+1),placeholder:lab,value:l[i][k]||'',disabled:canAct?null:true,style:st||'',oninput:e=>{tmKopie(a)[i][k]=e.target.value}});
+  return h('div',{class:'tb'},h('h4',{},'Terminliste (KEP-Branchentermine)'),
+    h('p',{class:'muted',style:'margin:0'},'Wird von Ausgabe zu Ausgabe fortgeschrieben. Termine vor dem Versanddatum ('+dmy(ref)+') erscheinen nicht im Newsletter.'),
+    !Array.isArray(a.termine)&&dirty?h('div',{class:'warn warn-k'},'Aus der vorherigen Ausgabe vorbelegt. Bitte prüfen, ergänzen und speichern.'):null,
+    vorb?h('div',{class:'warn warn-k'},vorb+(vorb===1?' Termin liegt':' Termine liegen')+' vor dem Versanddatum und '+(vorb===1?'wird':'werden')+' nicht angezeigt.'):null,
+    !l.length?h('p',{class:'leer'},'Noch keine Termine.'):null,
+    l.map((t,i)=>h('div',{style:'display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)'},
+      fe(i,'von','Beginn','date'),fe(i,'bis','Ende (optional)','date'),fe(i,'titel','Titel','text','flex:1 1 220px;min-width:180px'),fe(i,'ort','Ort','text','flex:1 1 140px;min-width:120px'),fe(i,'url','Link (optional)','url','flex:1 1 180px;min-width:140px'),
+      canAct?h('button',{class:'btn danger',type:'button','aria-label':'Termin '+(i+1)+' entfernen',onclick:()=>{tmKopie(a).splice(i,1);render()}},'Entfernen'):null)),
+    canAct?h('div',{class:'knoepfe'},
+      h('button',{class:'btn',type:'button',onclick:()=>{tmKopie(a).push({titel:'',von:'',bis:'',ort:'',url:''});render()}},'Termin hinzufügen'),
+      vorb?h('button',{class:'btn',type:'button',onclick:()=>{const w=tmKopie(a),ref2=tmRef(a);tmWork[a.id]=w.filter(t=>!tmVorbei(t,ref2));render()}},'Vergangene entfernen'):null,
+      h('button',{class:'btn',type:'button',onclick:()=>{tmUebernehmen(a);render()}},'Aus vorheriger Ausgabe übernehmen'),
+      h('button',{class:'btn primary',type:'button',onclick:()=>tmSpeichern(a)},'Terminliste speichern'),
+      dirty?h('button',{class:'btn',type:'button',onclick:()=>{delete tmWork[a.id];render()}},'Änderungen verwerfen'):null):null);
+}
+
+/* Design und HTML-Export: Layout der BdKEP-Designvorlage (design/newsletter-designvorlage.dc.html), E-Mail-tauglich mit Tabellen und Inline-CSS.
+   Jeder Abschnitt steht in <table class="sec">, die Schaltfläche ist <a class="btn">: so lässt sich das HTML später im Archiv wieder in Artikel zerlegen. */
+const NL_FUSS={kontakt:'info@bdkep.de',impressum:'Bundesverband der Kurier-Express-Post-Dienste e.V. · Friedrichstraße 95/PB 98 · 10117 Berlin · Tel: +49 30 20076207 · CEO: Andreas Schumann · Register: VR 31630 B',abmelden:'{{ unsubscribe }}'};
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const sicherUrl=u=>/^(https?:\/\/|mailto:)/i.test(String(u||'').trim())?String(u).trim():'';
+function textHtml(t,st){
+  return String(t||'').replace(/\r\n/g,'\n').split(/\n{2,}/).map(b=>b.trim()).filter(Boolean).map(b=>{const z=b.split('\n');
+    if(z.every(l=>/^\s*[-•]\s+/.test(l)))return '<ul style="margin:0 0 14px;padding-left:20px;'+st+'">'+z.map(l=>'<li style="margin:0 0 4px">'+esc(l.replace(/^\s*[-•]\s+/,''))+'</li>').join('')+'</ul>';
+    return '<p style="margin:0 0 14px;'+st+'">'+z.map(esc).join('<br>')+'</p>'}).join('');
+}
+function newsletterHtml(a){
+  const g=a.gesamt;if(!g)return '';
+  const NAVY='#1F3A5F',AKZ='#C97C3D',F='-apple-system,\'Segoe UI\',Helvetica,Arial,sans-serif',S='Georgia,\'Times New Roman\',serif',ref=tmRef(a);
+  const dl=a.versanddatum?new Intl.DateTimeFormat('de-DE',{day:'numeric',month:'long',year:'numeric',timeZone:'Europe/Berlin'}).format(new Date(a.versanddatum+'T12:00:00')):a.name;
+  const ab=g.abschnitte||[],termine=tmSort((Array.isArray(a.termine)?a.termine:[]).filter(t=>t.titel&&!tmVorbei(t,ref)));
+  const blick=ab.length?'<tr><td style="padding:0 32px 8px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F1EA;border-radius:4px"><tr><td style="padding:20px 24px 18px"><div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#6B6B6B;margin-bottom:12px">AUF EINEN BLICK</div>'
+    +ab.map((x,i)=>'<div style="font-size:14px;line-height:1.4;margin:0 0 9px"><a href="#art-'+(i+1)+'" style="color:#1A1A1A;text-decoration:none">→ '+esc(x.ueberschrift)+'</a></div>').join('')+'</td></tr></table></td></tr>':'';
+  const sek=ab.map((x,i)=>{
+    const k=String(x.kategorie||'').trim(),box=/partner|anzeige/i.test(k),fill=box,url=sicherUrl(x.url),farbe=katFarbe(k);
+    const badge=k?'<span style="display:inline-block;background:'+farbe+';color:#FFFFFF;font-size:10px;font-weight:700;letter-spacing:.8px;padding:4px 9px;border-radius:3px">'+esc(k.toUpperCase())+'</span>':'';
+    const btn=url?'<a class="btn" href="'+esc(url)+'" style="display:inline-block;'+(fill?'background:'+farbe+';color:#FFFFFF;border:1.5px solid '+farbe:'border:1.5px solid '+farbe+';color:'+farbe)+';padding:9px 19px;border-radius:4px;font-size:13px;font-weight:600;text-decoration:none">'+esc(x.linkText||'Weiterlesen →')+'</a>':'';
+    return '<tr><td style="padding:28px 32px 0"><table role="presentation" class="sec" id="art-'+(i+1)+'" width="100%" cellpadding="0" cellspacing="0"><tr><td style="'+(box?'background:#FBF6EC;border:1px solid #E7D9B8;border-radius:6px;padding:24px':'padding:0')+'">'
+      +badge+'<h2 style="font-family:'+S+';font-size:19px;line-height:1.35;margin:'+(k?'12px':'0')+' 0 10px;color:#1A1A1A">'+esc(x.ueberschrift)+'</h2>'+textHtml(x.text,'font-size:14px;line-height:1.6;color:#333333')+btn+'</td></tr></table></td></tr>';
+  }).join('');
+  const tm=termine.length?'<tr><td style="padding:34px 32px 8px"><div style="border-top:2px solid '+NAVY+';padding-top:20px"><div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#6B6B6B;margin-bottom:12px">KEP-BRANCHENTERMINE</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;border-collapse:collapse">'
+    +termine.map(t=>{const u=sicherUrl(t.url);return '<tr><td width="130" valign="top" style="padding:10px 12px 10px 0;color:#6B6B6B;border-bottom:1px solid #EDEBE5">'+esc(tmDatum(t))+'</td><td valign="top" style="padding:10px 0;border-bottom:1px solid #EDEBE5">'
+      +(u?'<a href="'+esc(u)+'" style="color:#1A1A1A;font-weight:600;text-decoration:none">'+esc(t.titel)+'</a>':'<span style="font-weight:600">'+esc(t.titel)+'</span>')+(t.ort?'<br><span style="color:#8A8A8A;font-size:12px">'+esc(t.ort)+'</span>':'')+'</td></tr>'}).join('')+'</table></div></td></tr>':'';
+  return '<!doctype html>\n<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(a.name)+'</title></head>\n'
+    +'<body style="margin:0;padding:0;background:#EAE8E2;font-family:'+F+';color:#1A1A1A"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EAE8E2"><tr><td align="center">'
+    +'<table role="presentation" width="640" cellpadding="0" cellspacing="0" style="width:100%;max-width:640px;background:#FFFFFF">'
+    +'<tr><td style="background:'+NAVY+';padding:28px 32px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="font-family:'+S+';font-size:23px;font-weight:700;color:#FFFFFF;letter-spacing:.5px">BdKEP</td>'
+    +'<td align="right" style="color:#C7D2DE;font-size:11px;line-height:1.5;letter-spacing:.4px">NEWSLETTER FÜR MITGLIEDER<br>Ausgabe '+esc(dl)+'</td></tr></table></td></tr>'
+    +'<tr><td style="padding:32px 32px 20px">'+textHtml(g.intro,'font-size:15px;line-height:1.6;color:#1A1A1A')+'</td></tr>'+blick+sek+tm
+    +'<tr><td style="padding:34px 32px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F1EA"><tr><td style="padding:26px 32px"><p style="margin:0 0 10px;font-size:13px;line-height:1.5">Fragen oder Themenvorschläge? <a href="mailto:'+esc(NL_FUSS.kontakt)+'" style="color:'+NAVY+';font-weight:600">'+esc(NL_FUSS.kontakt)+'</a></p>'
+    +'<p style="margin:0;font-size:11px;line-height:1.6;color:#6B6B6B">'+esc(NL_FUSS.impressum)+'</p><p style="margin:8px 0 0;font-size:11px"><a href="'+esc(NL_FUSS.abmelden)+'" style="color:#6B6B6B;text-decoration:underline">Newsletter abbestellen</a></p></td></tr></table></td></tr>'
+    +'</table></td></tr></table></body></html>';
+}
+const vorschauMobil=new Set();
+function htmlPanel(a){
+  const html=newsletterHtml(a),mob=vorschauMobil.has(a.id);
+  if(!html)return null;
+  const set=m=>()=>{m?vorschauMobil.add(a.id):vorschauMobil.delete(a.id);render()};
+  return h('div',{class:'tb'},h('h4',{},'Design und HTML'),
+    h('div',{class:'knoepfe'},h('button',{class:'btn'+(mob?'':' on'),type:'button','aria-pressed':String(!mob),onclick:set(false)},'Desktop'),h('button',{class:'btn'+(mob?' on':''),type:'button','aria-pressed':String(mob),onclick:set(true)},'Mobil'),
+      h('button',{class:'btn primary',type:'button',onclick:()=>copyText(html,'HTML-Code')},'HTML kopieren'),h('button',{class:'btn',type:'button',onclick:()=>htmlLaden({name:a.name,versanddatum:a.versanddatum,html})},'HTML herunterladen')),
+    h('p',{class:'muted',style:'margin:0'},'Entsteht aus dem gespeicherten Gesamttext, den kategorisierten Abschnitten und der Terminliste. Der Abmeldelink ist der Platzhalter '+NL_FUSS.abmelden+' des Versandtools.'),
+    h('iframe',{title:'Vorschau des Newsletters',sandbox:'',srcdoc:html,style:'width:'+(mob?'375px':'100%')+';max-width:100%;height:680px;border:1px solid var(--line);background:#fff'}));
 }
 const aZu=new Set((()=>{try{return JSON.parse(lsGet('nl.zu')||'[]')}catch(e){return[]}})());
 function ausgabePanel(a){
@@ -373,7 +474,10 @@ function ausgabePanel(a){
     h('div',{class:'kopf2 klapp',role:'button',tabindex:'0','aria-expanded':String(!zu),title:zu?'Ausgabe aufklappen':'Ausgabe einklappen',onclick:klapp,onkeydown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();klapp()}}},h('span',{class:'pfeil','aria-hidden':'true'},zu?'▸':'▾'),h('h2',{},'Ausgabe '+a.name),h('div',{class:'muted'},(a.versanddatum?'Versand '+datTag(a.versanddatum)+(a.versandzeit?', '+a.versandzeit+' Uhr':'')+' · ':'Termin offen · ')+l.length+(l.length===1?' Thema':' Themen')+' · '+warnN+' mit Hinweis · '+l.filter(x=>x.tb&&x.tb.freigegeben).length+' Texte freigegeben'+(phaseOf(a)?' · Status: '+phaseLabel(phaseOf(a)):'')),phaseOf(a)?phaseLeiste(a):null),
     zu?null:h('div',{class:'inhalt'},
       phaseKnoepfe(a),
+      phaseOf(a)&&phaseOf(a)!=='versendet'?katListe(a):null,
       PHASEN.findIndex(p=>p[0]===phaseOf(a))>=2&&phaseOf(a)!=='versendet'?gesamtPanel(a):null,
+      phaseOf(a)&&phaseOf(a)!=='versendet'?termineBereich(a):null,
+      PHASEN.findIndex(p=>p[0]===phaseOf(a))>=3&&phaseOf(a)!=='versendet'?htmlPanel(a):null,
       !a.versanddatum?h('div',{class:'warn warn-k'},'Für diese Ausgabe fehlt der Versandtermin.'):null,
       termEdit.has(a.id)&&canWrite!==false?h('div',{class:'formular',style:'margin:0'},terminFelder(a.id,{name:a.name,datum:a.versanddatum,zeit:a.versandzeit,notiz:a.notiz}),
         h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>termSpeichern(a)},'Termin speichern'),h('button',{class:'btn',type:'button',onclick:()=>{termEdit.delete(a.id);['name','datum','zeit','notiz'].forEach(k=>delete drafts[a.id+'.'+k]);render()}},'Abbrechen'))):null,
@@ -382,7 +486,7 @@ function ausgabePanel(a){
       !l.length?h('p',{class:'leer'},'Noch keine Themen zugeordnet. Im Eingangskorb „In Ausgabe '+a.name.replace(/\s*\d{4}$/,'')+'“ wählen.'):null,
       l.map((c,i)=>{const s=SRC[c.typ]||SRC.note;return h('div',{class:'pos'},
         h('div',{class:'zeile'},h('span',{class:'nr'},'Position '+(i+1)),h('span',{class:'badge',style:s.s},s.l)),
-        h('div',{class:'t'},(c.tb&&c.tb.ueberschrift)||c.titel||'Ohne Titel'),c.tb&&c.tb.kurztext?h('div',{class:'tb-vorschau'},kurz(c.tb.kurztext,200)):null,h('div',{class:'zeile'},h('span',{class:'badge',style:!c.tb?'background:#E8EBEF;color:#2B3440':c.tb.freigegeben?'background:#E1F1E9;color:#1E5A40':'background:#FFF6DD;color:#4A3608'},!c.tb?'Text fehlt':c.tb.freigegeben?'Text freigegeben':'Text im Entwurf')),warnBox(c),
+        h('div',{class:'t'},(c.tb&&c.tb.ueberschrift)||c.titel||'Ohne Titel'),c.tb&&c.tb.kurztext?h('div',{class:'tb-vorschau'},kurz(c.tb.kurztext,200)):null,katFeld(c,a),h('div',{class:'zeile'},h('span',{class:'badge',style:!c.tb?'background:#E8EBEF;color:#2B3440':c.tb.freigegeben?'background:#E1F1E9;color:#1E5A40':'background:#FFF6DD;color:#4A3608'},!c.tb?'Text fehlt':c.tb.freigegeben?'Text freigegeben':'Text im Entwurf')),warnBox(c),
         textOpen.has(c.id)?textPanel(c):null,
         h('div',{class:'knoepfe'},textToggle(c),
           canWrite===false?null:h('button',{class:'btn',type:'button',disabled:i===0,onclick:()=>hoch(c)},'Nach oben'),
@@ -1006,7 +1110,7 @@ function alsVersendet(a){
   const ab=inAusgabe(a.id).filter(c=>c.tb&&c.tb.freigegeben).map(c=>({ueberschrift:c.tb.ueberschrift||c.titel||'',text:c.tb.kurztext||'',linkText:c.tb.linkText||'',url:''}));
   if(!ab.length)return toast('Ohne freigegebene Texte lässt sich die Ausgabe nicht ins Archiv legen.');
   return schreiben(async()=>{
-    await db.doc('archiv/v-'+a.id).set({name:a.name,versanddatum:a.versanddatum||heuteBerlin(),titel:'',einleitung:'',abschnitte:ab,abbinder:'',stilvorbild:false,notiz:a.notiz||'',quelle:'ausgabe',ausgabeId:a.id,erfasstAm:nowIso()});
+    await db.doc('archiv/v-'+a.id).set({name:a.name,versanddatum:a.versanddatum||heuteBerlin(),titel:'',einleitung:'',abschnitte:ab,abbinder:'',stilvorbild:false,notiz:a.notiz||'',termine:Array.isArray(a.termine)?a.termine:[],quelle:'ausgabe',ausgabeId:a.id,erfasstAm:nowIso()});
     await db.doc('ausgaben/'+a.id).update({status:'versendet',versendetAm:nowIso()});
     delIds.delete('v-'+a.id);
   },'Im Archiv abgelegt. Die Ausgabe ist aus dem Versandplan genommen.');

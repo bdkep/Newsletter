@@ -11,13 +11,13 @@ Wie Hub, Sekretariat und Aufgaben: eine Artifact-Seite mit Artifact-Datenbank. `
 Datenbank-Sammlungen (Artifact-DB):
 - `quellen`: typ (`mail|note|link|document|image`), titel, text, url, mailBetreff, mailAbsender, mailDatum, quelle (`mail|hand`), erfasstAm, erfasstVon
 - `wuensche`: Wünsche zum Dashboard (text, von, status `offen|ausgearbeitet|geprueft|erledigt|geschlossen`, story, kriterien, erfolgsmass, pruefung, vorgabe, bewaehrt, kommentare, neuFuer, verlauf)
-- `ausgaben`: name, versanddatum (JJJJ-MM-TT), versandzeit (optional), notiz, status (`planung|versendet`), reihenfolge
-- `archiv`: bereits versendete Newsletter: name, versanddatum, titel, einleitung, abschnitte (ueberschrift, text, linkText, url), abbinder, stilvorbild, notiz, quelle (`import|hand|ausgabe`)
+- `ausgaben`: name, versanddatum (JJJJ-MM-TT), versandzeit (optional), notiz, status (`planung|versendet`), reihenfolge, phase (`themen|einzeltexte|gesamttext|design|gegenlesen|test1|korrektur|test2`), freigabe `{von,am}`, gesamt `{intro, abschnitte[{id,ueberschrift,text,linkText,url,kategorie}]}`, termine `[{titel,von,bis,ort,url}]`
+- `archiv`: bereits versendete Newsletter: name, versanddatum, titel, einleitung, abschnitte (ueberschrift, text, linkText, url), html (versendeter HTML-Code), termine, abbinder, stilvorbild, notiz, quelle (`import|hand|ausgabe`)
 - Textbausteine liegen im Dokument der Quelle (`tb`, `tbVersionen`); je Thema außerdem `zeichen` (Zielumfang), `ergaenzung` (ergänzende Angaben), `rueckfragen` (offene Fragen von Claude)
 
 ## Versandplan und Archiv
 
-Reiter „Versandplan“: Versandtermine neuer Ausgaben anlegen (Name, Datum, optional Uhrzeit, Notiz), ändern und löschen (nur ohne Themen). Jede neue Ausgabe braucht einen Termin, auch beim Anlegen im Eingangskorb. Der Termin ist im Versandplan und direkt in der Ausgabe änderbar. Die Ausgaben stehen nach Termin aufsteigend (spätester zuletzt), Bestand ohne Termin am Ende und markiert, überschrittene Termine rot. „Als versendet ins Archiv“ legt die freigegebenen Texte als Newsletter im Archiv ab und nimmt die Ausgabe aus Planung und Zuordnung.
+Reiter „Versandplan“: Versandtermine neuer Ausgaben anlegen (Name, Datum, optional Uhrzeit, Notiz), ändern und löschen (nur ohne Themen). Jede neue Ausgabe braucht einen Termin, auch beim Anlegen im Eingangskorb. Der Termin ist im Versandplan und direkt in der Ausgabe änderbar. Die Ausgaben stehen nach Termin aufsteigend (spätester zuletzt), Bestand ohne Termin am Ende und markiert, überschrittene Termine rot. „Als versendet ins Archiv“ verlangt den versendeten HTML-Code aus dem Newsletterprogramm, legt ihn mit den Artikeln im Archiv ab und nimmt die Ausgabe aus Planung und Zuordnung.
 
 Reiter „Archiv“: bereits versendete Newsletter zum Nachschlagen, Durchsuchen und Kopieren. Neue Newsletter lassen sich als Text oder aus einer HTML-Datei einlesen (je `h2` ein Abschnitt). Einzelne Abschnitte gehen per „Als Entwurf übernehmen“ in eine geplante Ausgabe, nie freigegeben und mit Hinweis zur Aktualitätsprüfung. Newsletter mit „Stilvorbild“ gehen mit höchstens 3 Newslettern und je 2 Abschnitten als Beispiele in den Claude-Vorschlag (steht in der Sendevorschau). Die Kennzahl „Üblicher Aufbau“ zeigt Abschnitte je Newsletter, Wörter je Abschnitt und Wörter je Überschrift. Eingelesen ist der Newsletter vom 30.09.2026 (`design/beispiel-newsletter-2026-09-30.html`).
 
@@ -52,3 +52,11 @@ Geplante Aufgabe „Newsletter: Mail-Abruf in die Inbox (23:45)“, täglich 23:
 | 4 | Textbausteine: Vorschlag per Claude mit Sendevorschau, Bearbeiten, Versionen, Freigabe, Text der Ausgabe kopieren | fertig |
 | 5 | Export | offen |
 | 6 | Prüfung | offen |
+
+## Ablauf einer Ausgabe
+
+Sammeln und Sichten im Eingangskorb laufen unabhängig von Ausgaben. Der Status einer Ausgabe beginnt mit dem ersten zugeordneten Thema und wird in der Ausgabe per „Weiter zu …“ geschaltet (mit Voraussetzungsprüfung):
+
+1. Themen → 2. Einzeltexte (je Thema ein Textbaustein, dazu eine Kategorie für das Badge) → 3. Gesamttext (Intro, „Auf einen Blick“, bearbeitbare Abschnitte) → 4. Design (HTML im BdKEP-Layout nach `design/newsletter-designvorlage.dc.html`, Vorschau Desktop/Mobil, Kopieren und Herunterladen) → 5. Gegenlesen und Freigabe (Name und Datum werden gespeichert) → 6. Testversand 1 → 7. Korrektur → 8. Testversand 2 → 9. Versendet.
+
+Die Terminliste (KEP-Branchentermine) gehört je Ausgabe dazu und wird aus der vorherigen Ausgabe oder dem Archiv fortgeschrieben; Termine vor dem Versanddatum fallen weg. „Versendet“ verlangt den versendeten HTML-Code und legt die Ausgabe im Archiv ab. Dort lassen sich die Fassung ansehen, kopieren und herunterladen sowie einzelne Artikel als Text oder HTML-Block kopieren und als Entwurf in eine neue Ausgabe übernehmen. Der Abmeldelink im HTML ist der Platzhalter `{{ unsubscribe }}` (Schreibweise von Brevo), Kontakt und Impressum stehen in `NL_FUSS` im Code.

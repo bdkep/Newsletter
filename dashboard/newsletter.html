@@ -29,6 +29,9 @@ h1{margin:4px 0 0;font-size:30px;font-weight:800;line-height:1.2}
 main{display:flex;flex-wrap:wrap;gap:24px;padding-block:24px 40px;align-items:flex-start}
 .links{flex:1 1 640px;min-width:0;background:var(--surface);border:1px solid var(--line)}
 .rechts{flex:1 1 520px;min-width:0;display:flex;flex-direction:column;gap:24px}
+/* Eingangskorb und Ausgaben untereinander in einer Spalte */
+main.einspaltig{flex-direction:column;flex-wrap:nowrap;align-items:stretch}
+main.einspaltig>.links,main.einspaltig>.rechts{flex:0 0 auto;width:100%}
 .sec-head{padding:20px 24px;border-bottom:1px solid var(--line)}
 .sec-top{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
 h2{margin:0;font-size:20px;font-weight:800;color:var(--navy)}
@@ -61,6 +64,10 @@ textarea{min-height:96px;resize:vertical}
 .ausgabe{background:var(--surface);border:1px solid var(--line)}
 .ausgabe .kopf2{background:var(--navy);color:#fff;padding:16px 24px}
 .ausgabe h2{color:#fff;font-size:18px}
+.phasen{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:4px 6px;font-size:12px}
+.phasen li{padding:3px 8px;border:1px solid var(--on-navy);color:var(--on-navy)}
+.phasen li.fertig{background:rgba(255,255,255,.18);color:#fff}
+.phasen li.jetzt{background:#fff;color:var(--navy);font-weight:700;border-color:#fff}
 .klappknopf{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:10px;cursor:pointer;min-height:44px;width:100%;color:#fff}
 .klappknopf:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .klappknopf .pfeil{color:var(--gold);font-size:18px;width:18px}
@@ -78,7 +85,7 @@ textarea{min-height:96px;resize:vertical}
 .senden{border:1px solid var(--gold);background:var(--warn-bg);padding:12px 14px;font-size:13px;line-height:1.5;color:var(--warn-ink);display:flex;flex-direction:column;gap:8px}
 .senden ul{margin:0;padding-left:18px}
 .tb-vorschau{font-size:14px;color:var(--ink)}
-.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:20;min-height:48px;padding:0 20px;border-radius:2px;font-size:14px;font-weight:700;background:var(--gold);color:var(--navy);border:1px solid var(--navy);display:inline-flex;align-items:center;gap:8px}
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:20;min-height:48px;padding:0 20px;border-radius:999px;box-shadow:0 4px 16px rgba(0,26,61,.10);font-size:14px;font-weight:700;background:var(--navy);color:#fff;border:1px solid var(--navy);display:inline-flex;align-items:center;gap:8px}
 .fab .plus{font-size:20px;line-height:1}
 @media (max-width:520px){.fab{padding:0 16px}.fab .txt{display:none}.fab{min-width:48px;justify-content:center}}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--navy);color:#fff;padding:10px 16px;font-size:14px;max-width:90vw;border-left:4px solid var(--gold)}
@@ -96,6 +103,50 @@ ul.hist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;ga
 ul.hist li{display:flex;flex-wrap:wrap;gap:4px 10px;overflow-wrap:anywhere}ul.hist .t{color:var(--muted);font-size:12px;min-width:16px}
 .wliste{padding:20px 24px;display:flex;flex-direction:column;gap:12px}
 @media (max-width:520px){.sec-head,.liste,.ausgabe .inhalt{padding-left:16px;padding-right:16px}.formular{margin-left:16px;margin-right:16px}.ausgabe .kopf2{padding-left:16px;padding-right:16px}}
+/* Chat: Verlauf in einer Karte, neueste unten, Eingabe darunter (eckig wie das übrige Dashboard) */
+.chat{max-width:960px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;min-width:0;width:100%}
+.chat .btn.small{min-height:32px;padding:0 10px;font-size:13px}
+.chat-wrap{display:flex;flex-direction:column;gap:16px;padding-block:24px 40px}
+.chat-wrap .chips{margin-top:0}
+.chat-suche{max-width:960px}
+.chat-list{list-style:none;margin:0;padding:16px 16px 8px;display:flex;flex-direction:column;gap:6px;max-height:70vh;max-height:max(320px,calc(100dvh - 420px));overflow-y:auto;min-width:0}
+.chat-tag{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:8px 0 2px}
+.chat-tag::before,.chat-tag::after{content:"";flex:1;height:1px;background:var(--line)}
+.chat-neu{display:flex;align-items:center;gap:10px;margin:6px 0}
+.chat-neu::before,.chat-neu::after{content:"";flex:1;height:1px;background:var(--gold)}
+.chat-m{display:flex;gap:10px;align-items:flex-start;padding:6px 8px;min-width:0}
+.chat-m.fuer{background:var(--warn-bg)}
+.chat-av{flex:none;width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.chat-av.p-Andreas{background:var(--navy);color:#fff;border-color:var(--navy)}
+.chat-av.p-Moritz{background:var(--gold);color:var(--navy);border-color:var(--gold)}
+.chat-k{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.chat-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:13px}
+.chat-meta b{color:var(--navy)}
+.chat-meta .t{color:var(--muted);font-variant-numeric:tabular-nums}
+.chat-meta .btn{margin-left:auto}
+.chat-text{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.chat-m.antwort,.chat-th-sum,.chat-th-form{margin-left:42px}
+.chat-m.antwort,.chat-th-form{border-left:2px solid var(--line);padding-left:12px}
+.chat-th-sum{margin-top:-4px}
+.chat-th-btn{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px;border:1px solid transparent;background:transparent;padding:4px 8px;font-size:13px;font-weight:700;color:var(--navy);min-height:32px}
+.chat-th-btn:hover{border-color:var(--line);background:var(--surface);filter:none}
+.chat-th-btn .t{font-weight:400;color:var(--muted)}
+.chat-av.mini{width:22px;height:22px;font-size:9px}
+.chat-th-form{padding:6px 0 6px 12px}
+.chat-form.th{padding:8px 10px;border:1px solid var(--line)}
+.chat-form.th textarea{min-height:56px}
+@media (max-width:520px){.chat-m.antwort,.chat-th-sum,.chat-th-form{margin-left:16px}}
+.chat .at{background:#DCE6F2;color:var(--navy);font-weight:600;padding:0 3px}
+.chat .at.ich{background:var(--warn-bg);color:var(--warn-ink);font-weight:700}
+.chat-form{position:relative;display:flex;flex-direction:column;gap:8px;padding:12px 16px 16px;border-top:1px solid var(--line);background:var(--bg)}
+.chat-form textarea{min-height:76px;resize:vertical}
+.chat-form .zr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.chat-erw{position:absolute;left:16px;bottom:calc(100% - 4px);z-index:6;min-width:200px;display:flex;flex-direction:column;gap:2px;padding:6px;background:var(--surface);border:1px solid var(--navy)}
+.chat-erw[hidden]{display:none}
+.chat-erw button{border:0;background:transparent;text-align:left;padding:8px 10px;font-weight:600;font-size:14px;color:var(--ink)}
+.chat-erw button[aria-selected="true"]{background:#DCE6F2;color:var(--navy)}
+.chat-leer{padding:22px 16px;text-align:center;color:var(--muted);font-size:14px;list-style:none}
+.chat-leer b{display:block;color:var(--navy);font-size:16px;margin-bottom:4px}
 </style>
 <div class="page" id="app"></div>
 <script>
@@ -318,12 +369,183 @@ function karte(c){
   el.append(body);
   return el;
 }
+/* Ausgabe-Status (Feld `phase` in `ausgaben`): beginnt mit dem ersten zugeordneten Thema, unabhängig vom Sammeln im Eingangskorb.
+   Ohne gespeicherten Wert gilt „Themen“, sobald ein Thema zugeordnet ist. „Versendet“ setzt weiterhin der Abschluss ins Archiv. */
+const PHASEN=[['themen','Themen'],['einzeltexte','Einzeltexte'],['gesamttext','Gesamttext'],['design','Design'],['gegenlesen','Gegenlesen'],['test1','Testversand 1'],['korrektur','Korrektur'],['test2','Testversand 2'],['versendet','Versendet']];
+const phaseLabel=k=>(PHASEN.find(p=>p[0]===k)||[])[1]||'';
+const phaseOf=a=>{if(a.status==='versendet')return 'versendet';if(!inAusgabe(a.id).length)return '';return PHASEN.some(p=>p[0]===a.phase&&p[0]!=='versendet')?a.phase:'themen'};
+/* Voraussetzung für den Wechsel in die nächste Stufe; liefert eine Meldung, wenn sie fehlt */
+function phaseSperre(a,von){
+  const l=inAusgabe(a.id);
+  if(von==='themen')return l.length?'':'Zuerst ein Thema zuordnen.';
+  if(von==='einzeltexte'){const o=l.filter(c=>!(c.tb&&String(c.tb.kurztext||'').trim()));return o.length?o.length+(o.length===1?' Thema hat':' Themen haben')+' noch keinen Einzeltext.':''}
+  if(von==='gesamttext')return !a.gesamt?'Zuerst den Gesamttext erzeugen.':!String(a.gesamt.intro||'').trim()?'Bitte ein Intro für den Gesamttext schreiben und speichern.':'';
+  if(von==='gegenlesen')return me?'':'Zum Freigeben oben rechts „Ich bin“ wählen.';
+  return '';
+}
+function phaseSetzen(a,neu,vor){
+  if(canWrite===false||!db)return toast('Keine Schreibrechte.');
+  if(vor){const s=phaseSperre(a,phaseOf(a));if(s)return toast(s,5000)}
+  const p={phase:neu,phaseAm:nowIso(),phaseVon:me||''};
+  if(neu==='gesamttext'&&vor&&!a.gesamt)p.gesamt=gesamtBauen(a);
+  if(neu==='test1'&&vor)p.freigabe={von:me,am:nowIso()};
+  if(PHASEN.findIndex(x=>x[0]===neu)<PHASEN.findIndex(x=>x[0]==='test1'))p.freigabe=null;
+  return schreiben(()=>db.doc('ausgaben/'+a.id).update(p),'Status: '+phaseLabel(neu)+'.');
+}
+function phaseLeiste(a){
+  const ph=phaseOf(a),i=PHASEN.findIndex(p=>p[0]===ph);
+  return h('ol',{class:'phasen','aria-label':'Status der Ausgabe'},PHASEN.map(([k,t],j)=>h('li',{class:j<i?'fertig':j===i?'jetzt':'','aria-current':j===i?'step':null},t)));
+}
+function phaseKnoepfe(a){
+  const ph=phaseOf(a),i=PHASEN.findIndex(p=>p[0]===ph);
+  if(!ph)return h('p',{class:'muted',style:'margin:0'},'Status beginnt mit dem ersten zugeordneten Thema.');
+  if(ph==='versendet')return null;
+  const next=PHASEN[i+1],prev=PHASEN[i-1];
+  return h('div',{class:'knoepfe'},
+    next&&next[0]!=='versendet'&&canWrite!==false?h('button',{class:'btn primary',type:'button',onclick:()=>phaseSetzen(a,next[0],true)},ph==='gegenlesen'?'Freigeben, weiter zu '+next[1]:'Weiter zu '+next[1]):null,
+    prev&&canWrite!==false?h('button',{class:'btn',type:'button',onclick:()=>phaseSetzen(a,prev[0],false)},'Zurück zu '+prev[1]):null,
+    next&&next[0]==='versendet'&&canWrite!==false?h('button',{class:'btn primary',type:'button','aria-expanded':String(delIds.has('v-'+a.id)),onclick:()=>{delIds.has('v-'+a.id)?delIds.delete('v-'+a.id):delIds.add('v-'+a.id);render()}},'Versendet: HTML ins Archiv ablegen'):null,
+    a.freigabe&&a.freigabe.von?h('span',{class:'muted'},'Freigegeben von '+a.freigabe.von+' · '+dat(a.freigabe.am,true)):null);
+}
+/* Gesamttext (Feld `gesamt` in `ausgaben`): {intro, abschnitte:[{id,ueberschrift,text,linkText,url}], erzeugtAm}. Entsteht aus den Einzeltexten und ist danach unabhängig davon bearbeitbar.
+   „Auf einen Blick“ (Inhaltsverzeichnis) wird immer aus den Überschriften der Abschnitte gebildet. */
+const gesamtBauen=(a,intro)=>({intro:intro!==undefined?intro:(a.gesamt&&a.gesamt.intro)||'',erzeugtAm:nowIso(),
+  abschnitte:inAusgabe(a.id).filter(c=>c.tb&&String(c.tb.kurztext||'').trim()).map(c=>({id:c.id,ueberschrift:c.tb.ueberschrift||c.titel||'',text:c.tb.kurztext||'',linkText:c.tb.linkText||'',url:c.url||'',kategorie:c.kategorie||''}))});
+const gesamtText=g=>(g.intro?g.intro+'\n\n':'')+'Auf einen Blick\n'+g.abschnitte.map(x=>'- '+x.ueberschrift).join('\n')+'\n\n'+g.abschnitte.map((x,i)=>(i+1)+'. '+x.ueberschrift+'\n'+x.text+(x.url?'\n'+(x.linkText?x.linkText+': ':'')+x.url:'')).join('\n\n');
+function gesamtPanel(a){
+  const g=a.gesamt,canAct=canWrite!==false,P='gt.'+a.id+'.';
+  const dv=(k,v)=>drafts[P+k]!==undefined?drafts[P+k]:v;
+  const ta=(k,v,lab,hoehe)=>{const t=h('textarea',{id:'gt-'+a.id+'-'+k.replace(/\W/g,'_'),'aria-label':lab,style:'min-height:'+hoehe+'px',disabled:canAct?null:true,oninput:e=>{drafts[P+k]=e.target.value}});t.value=dv(k,v);return t};
+  const neu=()=>schreiben(()=>db.doc('ausgaben/'+a.id).update({gesamt:gesamtBauen(a,g?dv('intro',g.intro):undefined)}),'Gesamttext aus den Einzeltexten erzeugt.').then(ok=>{if(ok)Object.keys(drafts).filter(k=>k.startsWith(P)&&k!==P+'intro').forEach(k=>delete drafts[k])});
+  const sp=()=>schreiben(()=>db.doc('ausgaben/'+a.id).update({gesamt:{...g,intro:dv('intro',g.intro),abschnitte:g.abschnitte.map((x,i)=>({...x,ueberschrift:dv(i+'.u',x.ueberschrift),text:dv(i+'.t',x.text),kategorie:String(dv(i+'.k',x.kategorie||'')).trim()}))}}),'Gesamttext gespeichert.').then(ok=>{if(ok)Object.keys(drafts).filter(k=>k.startsWith(P)).forEach(k=>delete drafts[k])});
+  if(!g)return h('div',{class:'tb'},h('h4',{},'Gesamttext'),h('p',{class:'muted'},'Noch nicht erzeugt. Aus den Einzeltexten entsteht ein gemeinsamer Text mit Intro und „Auf einen Blick“.'),
+    canAct?h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:neu},'Gesamttext erzeugen')):null);
+  const ge={...g,intro:dv('intro',g.intro),abschnitte:g.abschnitte.map((x,i)=>({...x,ueberschrift:dv(i+'.u',x.ueberschrift),text:dv(i+'.t',x.text),kategorie:String(dv(i+'.k',x.kategorie||'')).trim()}))};
+  const kf=(i,v)=>{const t=h('input',{type:'text',list:'kat-'+a.id,'aria-label':'Kategorie '+(i+1),placeholder:'Kategorie (Badge), z. B. Umfrage',disabled:canAct?null:true,style:'max-width:280px',oninput:e=>{drafts[P+i+'.k']=e.target.value}});t.value=v||'';return t};
+  const ids=new Set(g.abschnitte.map(x=>x.id)),akt=inAusgabe(a.id).filter(c=>c.tb&&String(c.tb.kurztext||'').trim()).map(c=>c.id);
+  const abw=akt.length!==g.abschnitte.length||akt.some((id,i)=>!ids.has(id)||g.abschnitte[i].id!==id);
+  return h('div',{class:'tb'},h('h4',{},'Gesamttext'),
+    abw?h('div',{class:'warn warn-k'},'Die Einzeltexte oder ihre Reihenfolge haben sich seit dem Erzeugen geändert. „Neu aus Einzeltexten“ übernimmt sie; eigene Änderungen an den Abschnitten gehen dabei verloren, das Intro bleibt.'):null,
+    h('label',{class:'feld'},'Intro (Anrede und Überblick)',ta('intro',g.intro,'Intro',110)),
+    h('div',{class:'abruf',style:'display:block'},h('b',{},'Auf einen Blick'),h('ul',{style:'margin:6px 0 0;padding-left:18px'},ge.abschnitte.map(x=>h('li',{},x.ueberschrift||'Ohne Überschrift')))),
+    ge.abschnitte.map((x,i)=>h('div',{class:'tb'},h('h4',{},(i+1)+'. Abschnitt'),h('label',{class:'feld'},'Kategorie (Badge im Newsletter)',kf(i,x.kategorie)),h('label',{class:'feld'},'Überschrift',ta(i+'.u',x.ueberschrift,'Überschrift '+(i+1),48)),h('label',{class:'feld'},'Text',ta(i+'.t',x.text,'Text '+(i+1),120)),
+      x.url?h('div',{class:'meta'},(x.linkText?'Schaltfläche: '+x.linkText+' · ':'')+x.url):null)),
+    h('div',{class:'knoepfe'},canAct?h('button',{class:'btn primary',type:'button',onclick:sp},'Gesamttext speichern'):null,
+      h('button',{class:'btn',type:'button',onclick:()=>copyText(gesamtText(ge),'Gesamttext')},'Gesamttext kopieren'),
+      canAct?h('button',{class:'btn',type:'button',onclick:neu},'Neu aus Einzeltexten'):null));
+}
+/* Kategorie je Thema (Feld `kategorie` an der Quelle): erscheint als Badge im Newsletter. Freie Eingabe mit Vorschlägen. */
+const KATEGORIEN=['Partnerangebot','Umfrage','Forschung','Regulatorik','Marktdaten','Anzeige','Veranstaltung','Mitgliedervorteil'];
+const katFarbe=k=>{k=String(k||'').toLowerCase();return /partner|anzeige|vorteil/.test(k)?'#C97C3D':/umfrage|regulat/.test(k)?'#1F3A5F':/forsch/.test(k)?'#3E7C74':'#6B6B6B'};
+const katListe=a=>h('datalist',{id:'kat-'+a.id},KATEGORIEN.map(k=>h('option',{value:k})));
+const katFeld=(c,a)=>h('label',{class:'feld'},'Kategorie (Badge im Newsletter)',h('input',{type:'text',list:'kat-'+a.id,placeholder:'z. B. Umfrage',value:c.kategorie||'',disabled:canWrite===false?true:null,style:'max-width:280px',onchange:e=>upd(c,{kategorie:e.target.value.trim()},'Kategorie gespeichert.')}));
+
+/* Terminliste je Ausgabe (Feld `termine` in `ausgaben`: [{titel,von,bis,ort,url}]). Wird aus der vorherigen Ausgabe fortgeschrieben: vergangene Termine fallen weg, neue kommen dazu. */
+const tmWork={};
+const tmEnde=t=>t.bis||t.von||'';
+const tmRef=a=>a.versanddatum||heuteBerlin();
+const tmVorbei=(t,ref)=>!!tmEnde(t)&&tmEnde(t)<ref;
+const dmy=s=>s?s.slice(8,10)+'.'+s.slice(5,7)+'.'+s.slice(0,4):'';
+const tmDatum=t=>{if(!t.von)return '';if(!t.bis||t.bis===t.von)return dmy(t.von);const v=t.von,b=t.bis;
+  return v.slice(0,4)!==b.slice(0,4)?dmy(v)+' – '+dmy(b):v.slice(0,7)===b.slice(0,7)?v.slice(8,10)+'.–'+dmy(b):v.slice(8,10)+'.'+v.slice(5,7)+'.–'+dmy(b)};
+const tmSort=l=>l.slice().sort((x,y)=>(x.von||'9999').localeCompare(y.von||'9999'));
+const tmListe=a=>tmWork[a.id]||(Array.isArray(a.termine)?a.termine:[]);
+const tmKopie=a=>tmWork[a.id]||(tmWork[a.id]=tmListe(a).map(t=>({...t})));
+function tmVorlage(a){
+  const q=[...ausgaben.filter(x=>x.id!==a.id).map(x=>({d:x.versanddatum||'',t:x.termine})),...archiv.map(x=>({d:x.versanddatum||'',t:x.termine}))]
+    .filter(x=>Array.isArray(x.t)&&x.t.length&&x.d&&(!a.versanddatum||x.d<a.versanddatum)).sort((x,y)=>y.d.localeCompare(x.d));
+  return q.length?q[0].t:[];
+}
+function tmUebernehmen(a){
+  const w=tmKopie(a),ref=tmRef(a),key=t=>(t.titel||'')+'|'+(t.von||'');let n=0;
+  tmVorlage(a).filter(t=>!tmVorbei(t,ref)).forEach(t=>{if(!w.some(x=>key(x)===key(t))){w.push({titel:t.titel||'',von:t.von||'',bis:t.bis||'',ort:t.ort||'',url:t.url||''});n++}});
+  toast(n?n+(n===1?' Termin':' Termine')+' aus der vorherigen Ausgabe übernommen. Bitte speichern.':'Keine weiteren Termine aus der vorherigen Ausgabe.');
+}
+function tmSpeichern(a){
+  const l=tmSort(tmListe(a).filter(t=>String(t.titel||'').trim()).map(t=>({titel:t.titel.trim(),von:t.von||'',bis:t.bis||'',ort:(t.ort||'').trim(),url:(t.url||'').trim()})));
+  return schreiben(()=>db.doc('ausgaben/'+a.id).update({termine:l}),'Terminliste gespeichert.').then(ok=>{if(ok){delete tmWork[a.id];render()}});
+}
+function termineBereich(a){
+  const canAct=canWrite!==false,ref=tmRef(a);
+  if(!Array.isArray(a.termine)&&!tmWork[a.id]&&canAct){const v=tmVorlage(a).filter(t=>!tmVorbei(t,ref));if(v.length)tmWork[a.id]=v.map(t=>({titel:t.titel||'',von:t.von||'',bis:t.bis||'',ort:t.ort||'',url:t.url||''}))}
+  const l=tmListe(a),dirty=!!tmWork[a.id],vorb=l.filter(t=>tmVorbei(t,ref)).length;
+  const fe=(i,k,lab,type,st)=>h('input',{type,'aria-label':lab+' '+(i+1),placeholder:lab,value:l[i][k]||'',disabled:canAct?null:true,style:st||'',oninput:e=>{tmKopie(a)[i][k]=e.target.value}});
+  return h('div',{class:'tb'},h('h4',{},'Terminliste (KEP-Branchentermine)'),
+    h('p',{class:'muted',style:'margin:0'},'Wird von Ausgabe zu Ausgabe fortgeschrieben. Termine vor dem Versanddatum ('+dmy(ref)+') erscheinen nicht im Newsletter.'),
+    !Array.isArray(a.termine)&&dirty?h('div',{class:'warn warn-k'},'Aus der vorherigen Ausgabe vorbelegt. Bitte prüfen, ergänzen und speichern.'):null,
+    vorb?h('div',{class:'warn warn-k'},vorb+(vorb===1?' Termin liegt':' Termine liegen')+' vor dem Versanddatum und '+(vorb===1?'wird':'werden')+' nicht angezeigt.'):null,
+    !l.length?h('p',{class:'leer'},'Noch keine Termine.'):null,
+    l.map((t,i)=>h('div',{style:'display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)'},
+      fe(i,'von','Beginn','date'),fe(i,'bis','Ende (optional)','date'),fe(i,'titel','Titel','text','flex:1 1 220px;min-width:180px'),fe(i,'ort','Ort','text','flex:1 1 140px;min-width:120px'),fe(i,'url','Link (optional)','url','flex:1 1 180px;min-width:140px'),
+      canAct?h('button',{class:'btn danger',type:'button','aria-label':'Termin '+(i+1)+' entfernen',onclick:()=>{tmKopie(a).splice(i,1);render()}},'Entfernen'):null)),
+    canAct?h('div',{class:'knoepfe'},
+      h('button',{class:'btn',type:'button',onclick:()=>{tmKopie(a).push({titel:'',von:'',bis:'',ort:'',url:''});render()}},'Termin hinzufügen'),
+      vorb?h('button',{class:'btn',type:'button',onclick:()=>{const w=tmKopie(a),ref2=tmRef(a);tmWork[a.id]=w.filter(t=>!tmVorbei(t,ref2));render()}},'Vergangene entfernen'):null,
+      h('button',{class:'btn',type:'button',onclick:()=>{tmUebernehmen(a);render()}},'Aus vorheriger Ausgabe übernehmen'),
+      h('button',{class:'btn primary',type:'button',onclick:()=>tmSpeichern(a)},'Terminliste speichern'),
+      dirty?h('button',{class:'btn',type:'button',onclick:()=>{delete tmWork[a.id];render()}},'Änderungen verwerfen'):null):null);
+}
+
+/* Design und HTML-Export: Layout der BdKEP-Designvorlage (design/newsletter-designvorlage.dc.html), E-Mail-tauglich mit Tabellen und Inline-CSS.
+   Jeder Abschnitt steht in <table class="sec">, die Schaltfläche ist <a class="btn">: so lässt sich das HTML später im Archiv wieder in Artikel zerlegen. */
+const NL_FUSS={kontakt:'info@bdkep.de',impressum:'Bundesverband der Kurier-Express-Post-Dienste e.V. · Friedrichstraße 95/PB 98 · 10117 Berlin · Tel: +49 30 20076207 · CEO: Andreas Schumann · Register: VR 31630 B',abmelden:'{{ unsubscribe }}'};
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const sicherUrl=u=>/^(https?:\/\/|mailto:)/i.test(String(u||'').trim())?String(u).trim():'';
+function textHtml(t,st){
+  return String(t||'').replace(/\r\n/g,'\n').split(/\n{2,}/).map(b=>b.trim()).filter(Boolean).map(b=>{const z=b.split('\n');
+    if(z.every(l=>/^\s*[-•]\s+/.test(l)))return '<ul style="margin:0 0 14px;padding-left:20px;'+st+'">'+z.map(l=>'<li style="margin:0 0 4px">'+esc(l.replace(/^\s*[-•]\s+/,''))+'</li>').join('')+'</ul>';
+    return '<p style="margin:0 0 14px;'+st+'">'+z.map(esc).join('<br>')+'</p>'}).join('');
+}
+function newsletterHtml(a){
+  const g=a.gesamt;if(!g)return '';
+  const NAVY='#1F3A5F',AKZ='#C97C3D',F='-apple-system,\'Segoe UI\',Helvetica,Arial,sans-serif',S='Georgia,\'Times New Roman\',serif',ref=tmRef(a);
+  const dl=a.versanddatum?new Intl.DateTimeFormat('de-DE',{day:'numeric',month:'long',year:'numeric',timeZone:'Europe/Berlin'}).format(new Date(a.versanddatum+'T12:00:00')):a.name;
+  const ab=g.abschnitte||[],termine=tmSort((Array.isArray(a.termine)?a.termine:[]).filter(t=>t.titel&&!tmVorbei(t,ref)));
+  const blick=ab.length?'<tr><td style="padding:0 32px 8px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F1EA;border-radius:4px"><tr><td style="padding:20px 24px 18px"><div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#6B6B6B;margin-bottom:12px">AUF EINEN BLICK</div>'
+    +ab.map((x,i)=>'<div style="font-size:14px;line-height:1.4;margin:0 0 9px"><a href="#art-'+(i+1)+'" style="color:#1A1A1A;text-decoration:none">→ '+esc(x.ueberschrift)+'</a></div>').join('')+'</td></tr></table></td></tr>':'';
+  const sek=ab.map((x,i)=>{
+    const k=String(x.kategorie||'').trim(),box=/partner|anzeige/i.test(k),fill=box,url=sicherUrl(x.url),farbe=katFarbe(k);
+    const badge=k?'<span style="display:inline-block;background:'+farbe+';color:#FFFFFF;font-size:10px;font-weight:700;letter-spacing:.8px;padding:4px 9px;border-radius:3px">'+esc(k.toUpperCase())+'</span>':'';
+    const btn=url?'<a class="btn" href="'+esc(url)+'" style="display:inline-block;'+(fill?'background:'+farbe+';color:#FFFFFF;border:1.5px solid '+farbe:'border:1.5px solid '+farbe+';color:'+farbe)+';padding:9px 19px;border-radius:4px;font-size:13px;font-weight:600;text-decoration:none">'+esc(x.linkText||'Weiterlesen →')+'</a>':'';
+    return '<tr><td style="padding:28px 32px 0"><table role="presentation" class="sec" id="art-'+(i+1)+'" width="100%" cellpadding="0" cellspacing="0"><tr><td style="'+(box?'background:#FBF6EC;border:1px solid #E7D9B8;border-radius:6px;padding:24px':'padding:0')+'">'
+      +badge+'<h2 style="font-family:'+S+';font-size:19px;line-height:1.35;margin:'+(k?'12px':'0')+' 0 10px;color:#1A1A1A">'+esc(x.ueberschrift)+'</h2>'+textHtml(x.text,'font-size:14px;line-height:1.6;color:#333333')+btn+'</td></tr></table></td></tr>';
+  }).join('');
+  const tm=termine.length?'<tr><td style="padding:34px 32px 8px"><div style="border-top:2px solid '+NAVY+';padding-top:20px"><div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#6B6B6B;margin-bottom:12px">KEP-BRANCHENTERMINE</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;border-collapse:collapse">'
+    +termine.map(t=>{const u=sicherUrl(t.url);return '<tr><td width="130" valign="top" style="padding:10px 12px 10px 0;color:#6B6B6B;border-bottom:1px solid #EDEBE5">'+esc(tmDatum(t))+'</td><td valign="top" style="padding:10px 0;border-bottom:1px solid #EDEBE5">'
+      +(u?'<a href="'+esc(u)+'" style="color:#1A1A1A;font-weight:600;text-decoration:none">'+esc(t.titel)+'</a>':'<span style="font-weight:600">'+esc(t.titel)+'</span>')+(t.ort?'<br><span style="color:#8A8A8A;font-size:12px">'+esc(t.ort)+'</span>':'')+'</td></tr>'}).join('')+'</table></div></td></tr>':'';
+  return '<!doctype html>\n<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(a.name)+'</title></head>\n'
+    +'<body style="margin:0;padding:0;background:#EAE8E2;font-family:'+F+';color:#1A1A1A"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EAE8E2"><tr><td align="center">'
+    +'<table role="presentation" width="640" cellpadding="0" cellspacing="0" style="width:100%;max-width:640px;background:#FFFFFF">'
+    +'<tr><td style="background:'+NAVY+';padding:28px 32px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="font-family:'+S+';font-size:23px;font-weight:700;color:#FFFFFF;letter-spacing:.5px">BdKEP</td>'
+    +'<td align="right" style="color:#C7D2DE;font-size:11px;line-height:1.5;letter-spacing:.4px">NEWSLETTER FÜR MITGLIEDER<br>Ausgabe '+esc(dl)+'</td></tr></table></td></tr>'
+    +'<tr><td style="padding:32px 32px 20px">'+textHtml(g.intro,'font-size:15px;line-height:1.6;color:#1A1A1A')+'</td></tr>'+blick+sek+tm
+    +'<tr><td style="padding:34px 32px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F1EA"><tr><td style="padding:26px 32px"><p style="margin:0 0 10px;font-size:13px;line-height:1.5">Fragen oder Themenvorschläge? <a href="mailto:'+esc(NL_FUSS.kontakt)+'" style="color:'+NAVY+';font-weight:600">'+esc(NL_FUSS.kontakt)+'</a></p>'
+    +'<p style="margin:0;font-size:11px;line-height:1.6;color:#6B6B6B">'+esc(NL_FUSS.impressum)+'</p><p style="margin:8px 0 0;font-size:11px"><a href="'+esc(NL_FUSS.abmelden)+'" style="color:#6B6B6B;text-decoration:underline">Newsletter abbestellen</a></p></td></tr></table></td></tr>'
+    +'</table></td></tr></table></body></html>';
+}
+const vorschauMobil=new Set();
+function htmlPanel(a){
+  const html=newsletterHtml(a),mob=vorschauMobil.has(a.id);
+  if(!html)return null;
+  const set=m=>()=>{m?vorschauMobil.add(a.id):vorschauMobil.delete(a.id);render()};
+  return h('div',{class:'tb'},h('h4',{},'Design und HTML'),
+    h('div',{class:'knoepfe'},h('button',{class:'btn'+(mob?'':' on'),type:'button','aria-pressed':String(!mob),onclick:set(false)},'Desktop'),h('button',{class:'btn'+(mob?' on':''),type:'button','aria-pressed':String(mob),onclick:set(true)},'Mobil'),
+      h('button',{class:'btn primary',type:'button',onclick:()=>copyText(html,'HTML-Code')},'HTML kopieren'),h('button',{class:'btn',type:'button',onclick:()=>htmlLaden({name:a.name,versanddatum:a.versanddatum,html})},'HTML herunterladen')),
+    h('p',{class:'muted',style:'margin:0'},'Entsteht aus dem gespeicherten Gesamttext, den kategorisierten Abschnitten und der Terminliste. Der Abmeldelink ist der Platzhalter '+NL_FUSS.abmelden+' des Versandtools.'),
+    h('iframe',{title:'Vorschau des Newsletters',sandbox:'',srcdoc:html,style:'width:'+(mob?'375px':'100%')+';max-width:100%;height:680px;border:1px solid var(--line);background:#fff'}));
+}
 const aToggle=id=>{aZu.has(id)?aZu.delete(id):aZu.add(id);lsSet('nl.azu',[...aZu].join(','));render()};
 function ausgabePanel(a){
   const l=inAusgabe(a.id),warnN=l.filter(x=>x.hinweisText).length,zu=aZu.has(a.id);
   return h('div',{class:'ausgabe'},
-    h('div',{class:'kopf2 klapp'},h('button',{class:'klappknopf',type:'button','aria-expanded':String(!zu),'aria-label':(zu?'Ausgabe aufklappen: ':'Ausgabe zuklappen: ')+a.name,onclick:()=>aToggle(a.id)},h('span',{class:'pfeil','aria-hidden':'true'},zu?'▸':'▾'),h('h2',{},'Ausgabe '+a.name)),h('div',{class:'muted'},(a.versanddatum?'Versand '+datTag(a.versanddatum)+(a.versandzeit?', '+a.versandzeit+' Uhr':'')+' · ':'Termin offen · ')+l.length+(l.length===1?' Thema':' Themen')+' · '+warnN+' mit Hinweis · '+l.filter(x=>x.tb&&x.tb.freigegeben).length+' Texte freigegeben')),
+    h('div',{class:'kopf2 klapp'},h('button',{class:'klappknopf',type:'button','aria-expanded':String(!zu),'aria-label':(zu?'Ausgabe aufklappen: ':'Ausgabe zuklappen: ')+a.name,onclick:()=>aToggle(a.id)},h('span',{class:'pfeil','aria-hidden':'true'},zu?'▸':'▾'),h('h2',{},'Ausgabe '+a.name)),h('div',{class:'muted'},(a.versanddatum?'Versand '+datTag(a.versanddatum)+(a.versandzeit?', '+a.versandzeit+' Uhr':'')+' · ':'Termin offen · ')+l.length+(l.length===1?' Thema':' Themen')+' · '+warnN+' mit Hinweis · '+l.filter(x=>x.tb&&x.tb.freigegeben).length+' Texte freigegeben'+(phaseOf(a)?' · Status: '+phaseLabel(phaseOf(a)):'')),phaseOf(a)?phaseLeiste(a):null),
     zu?null:h('div',{class:'inhalt'},
+      phaseKnoepfe(a),
+      delIds.has('v-'+a.id)&&canWrite!==false?versandForm(a):null,
+      phaseOf(a)&&phaseOf(a)!=='versendet'?katListe(a):null,
+      PHASEN.findIndex(p=>p[0]===phaseOf(a))>=2&&phaseOf(a)!=='versendet'?gesamtPanel(a):null,
+      phaseOf(a)&&phaseOf(a)!=='versendet'?termineBereich(a):null,
+      PHASEN.findIndex(p=>p[0]===phaseOf(a))>=3&&phaseOf(a)!=='versendet'?htmlPanel(a):null,
       !a.versanddatum?h('div',{class:'warn warn-k'},'Für diese Ausgabe fehlt der Versandtermin.'):null,
       termEdit.has(a.id)&&canWrite!==false?h('div',{class:'formular',style:'margin:0'},terminFelder(a.id,{name:a.name,datum:a.versanddatum,zeit:a.versandzeit,notiz:a.notiz}),
         h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>termSpeichern(a)},'Termin speichern'),h('button',{class:'btn',type:'button',onclick:()=>{termEdit.delete(a.id);['name','datum','zeit','notiz'].forEach(k=>delete drafts[a.id+'.'+k]);render()}},'Abbrechen'))):null,
@@ -332,7 +554,7 @@ function ausgabePanel(a){
       !l.length?h('p',{class:'leer'},'Noch keine Themen zugeordnet. Im Eingangskorb „In Ausgabe '+a.name.replace(/\s*\d{4}$/,'')+'“ wählen.'):null,
       l.map((c,i)=>{const s=SRC[c.typ]||SRC.note;return h('div',{class:'pos'},
         h('div',{class:'zeile'},h('span',{class:'nr'},'Position '+(i+1)),h('span',{class:'badge',style:s.s},s.l)),
-        h('div',{class:'t'},(c.tb&&c.tb.ueberschrift)||c.titel||'Ohne Titel'),c.tb&&c.tb.kurztext?h('div',{class:'tb-vorschau'},kurz(c.tb.kurztext,200)):null,h('div',{class:'zeile'},h('span',{class:'badge',style:!c.tb?'background:#E8EBEF;color:#2B3440':c.tb.freigegeben?'background:#E1F1E9;color:#1E5A40':'background:#FFF6DD;color:#4A3608'},!c.tb?'Text fehlt':c.tb.freigegeben?'Text freigegeben':'Text im Entwurf')),warnBox(c),
+        h('div',{class:'t'},(c.tb&&c.tb.ueberschrift)||c.titel||'Ohne Titel'),c.tb&&c.tb.kurztext?h('div',{class:'tb-vorschau'},kurz(c.tb.kurztext,200)):null,katFeld(c,a),h('div',{class:'zeile'},h('span',{class:'badge',style:!c.tb?'background:#E8EBEF;color:#2B3440':c.tb.freigegeben?'background:#E1F1E9;color:#1E5A40':'background:#FFF6DD;color:#4A3608'},!c.tb?'Text fehlt':c.tb.freigegeben?'Text freigegeben':'Text im Entwurf')),warnBox(c),
         textOpen.has(c.id)?textPanel(c):null,
         h('div',{class:'knoepfe'},textToggle(c),
           canWrite===false?null:h('button',{class:'btn',type:'button',disabled:i===0,onclick:()=>hoch(c)},'Nach oben'),
@@ -354,7 +576,7 @@ const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
 const aZu=new Set((lsGet('nl.azu')||'').split(',').filter(Boolean));
 let me=PERSONEN.includes(lsGet('nl.me'))?lsGet('nl.me'):'';
-const VIEWS=['eingang','termine','archiv','wuensche'];
+const VIEWS=['chat','eingang','termine','archiv','wuensche'];
 let view=VIEWS.includes(lsGet('nl.view'))?lsGet('nl.view'):'eingang';
 let wunsch=[],wLoaded=false,wLoadError='',wFilter=lsGet('nl.wfilter')||'offen',wq='',wForm=false,wSaving=false;
 const wCard=new Set(),wHist=new Set(),wEdit=new Set(),wBusy=new Set(),wCtl={},wPr={},wPrBusy=new Set(),wPrCtl={};
@@ -778,8 +1000,8 @@ function wuenscheView(){
       list.map(wcard))));
 }
 /* ---- Versandplan und Archiv ----
-   Sammlung `ausgaben`: name, versanddatum (JJJJ-MM-TT), versandzeit (HH:MM, optional), notiz, status (planung | versendet), versendetAm, reihenfolge, angelegtAm.
-   Sammlung `archiv`: name, versanddatum, titel, einleitung, abschnitte [{ueberschrift,text,linkText,url}], abbinder, stilvorbild, notiz,
+   Sammlung `ausgaben`: name, versanddatum (JJJJ-MM-TT), versandzeit (HH:MM, optional), notiz, status (planung | versendet), phase (themen | einzeltexte | gesamttext | design | gegenlesen | test1 | korrektur | test2), phaseAm, phaseVon, freigabe {von,am}, gesamt {intro, abschnitte[{id,ueberschrift,text,linkText,url}], erzeugtAm}, versendetAm, reihenfolge, angelegtAm.
+   Sammlung `archiv`: name, versanddatum, titel, einleitung, abschnitte [{ueberschrift,text,linkText,url}], html (versendeter HTML-Code), abbinder, stilvorbild, notiz,
    quelle (import | hand | ausgabe), ausgabeId, erfasstAm. Zweck: Aufbau, Ausdruck und Grammatik vereinheitlichen, auf ältere Meldungen verweisen, Abschnitte übernehmen. */
 let archiv=[],aLoaded=false,aq='',aFilter='alle',aForm=false,termForm=false;
 const aOpen=new Set(),termEdit=new Set();
@@ -821,6 +1043,26 @@ const abschnitteText=l=>l.map(a=>a.ueberschrift+'\n'+a.text+(a.url?'\n'+(a.linkT
 function abschnitteAusText(t){
   return String(t||'').replace(/\r\n/g,'\n').split(/\n\s*-{3,}\s*\n/).map(b=>b.trim()).filter(Boolean).map(b=>{const z=b.split('\n');return{ueberschrift:z[0].trim(),text:z.slice(1).join('\n').trim(),linkText:'',url:''}});
 }
+/* Versendeter HTML-Code: maßgebliches Dokument eines Archiv-Eintrags (Feld `html`). Der Block eines Artikels ist der Bereich um seine Überschrift (h2). */
+const htmlOpen=new Set();
+function blockHtml(n,a){
+  if(!n.html)return '';
+  const d=new DOMParser().parseFromString(n.html,'text/html'),norm=s=>String(s||'').replace(/\s+/g,' ').trim();
+  for(const h2 of d.querySelectorAll('h2')){
+    const c=h2.cloneNode(true);c.querySelectorAll('.n').forEach(x=>x.remove());
+    if(norm(c.textContent)===norm(a.ueberschrift))return (h2.closest('.sec')||h2.parentElement).outerHTML;
+  }
+  return '';
+}
+function htmlLaden(n){
+  const dn=(n.name||'newsletter').replace(/[^\wäöüÄÖÜß.-]+/g,'-')+(n.versanddatum?'-'+n.versanddatum:'')+'.html',u=URL.createObjectURL(new Blob([n.html],{type:'text/html'})),a=h('a',{href:u,download:dn});
+  document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);
+}
+function htmlFeld(n){
+  const k='ah.'+n.id,t=h('textarea',{id:'ah-'+n.id,'aria-label':'Versendeter HTML-Code',style:'min-height:140px',placeholder:'HTML-Code einfügen, so wie er mit dem Newsletterprogramm versendet wurde.',oninput:e=>{drafts[k]=e.target.value}});t.value=drafts[k]||'';
+  return h('div',{class:'tb'},h('h4',{},'Versendeter HTML-Code'),h('p',{class:'muted'},'Für diesen Eintrag ist noch kein HTML-Code hinterlegt.'),t,
+    h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:async()=>{const v=(drafts[k]||'').trim();if(!v)return toast('Bitte den HTML-Code einfügen.');if(await archivUpd(n,{html:v},'HTML-Code im Archiv gespeichert.'))delete drafts[k]}},'HTML speichern')));
+}
 const archivUpd=(n,p,msg)=>schreiben(()=>db.doc('archiv/'+n.id).update(p),msg);
 const archivLoeschen=n=>schreiben(async()=>{await db.doc('archiv/'+n.id).delete();delIds.delete('ar-'+n.id);aOpen.delete(n.id)},'Newsletter aus dem Archiv gelöscht.');
 async function archivAnlegen(){
@@ -829,8 +1071,8 @@ async function archivAnlegen(){
   if(!datum)return toast('Bitte das Versanddatum angeben.');
   if(!ab.length)return toast('Bitte mindestens einen Abschnitt eintragen: erste Zeile Überschrift, darunter der Text.');
   const id='i-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
-  const ok=await schreiben(()=>db.doc('archiv/'+id).set({name,versanddatum:datum,titel:(drafts['arch.titel']||'').trim(),einleitung:'',abschnitte:ab,abbinder:'',stilvorbild:false,notiz:'',quelle:'import',erfasstAm:nowIso()}),'Im Archiv abgelegt.');
-  if(ok){aForm=false;['name','datum','titel','text'].forEach(k=>delete drafts['arch.'+k]);render()}
+  const ok=await schreiben(()=>db.doc('archiv/'+id).set({name,versanddatum:datum,titel:(drafts['arch.titel']||'').trim(),einleitung:'',abschnitte:ab,html:(drafts['arch.html']||'').trim(),abbinder:'',stilvorbild:false,notiz:'',quelle:'import',erfasstAm:nowIso()}),'Im Archiv abgelegt.');
+  if(ok){aForm=false;['name','datum','titel','text','html'].forEach(k=>delete drafts['arch.'+k]);render()}
 }
 /* Abschnitt als Entwurf in eine Ausgabe übernehmen: Quelle mit Text im Entwurf, nie freigegeben, mit Hinweis zur Aktualitätsprüfung */
 function uebernehmen(n,a,ausId){
@@ -862,14 +1104,20 @@ function archivKarte(n){
       s.value=drafts[wk]!==undefined?drafts[wk]:(sel[0]?sel[0].id:'');
       el.append(h('div',{class:'tb'},h('h4',{},(i+1)+'. '+a.ueberschrift),h('p',{style:'white-space:pre-wrap'},a.text),
         a.url||a.linkText?h('div',{class:'meta'},(a.linkText?'Schaltfläche: '+a.linkText:'')+(a.url?(a.linkText?' · ':'')+a.url:'')):null,
-        h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:()=>copyText(a.ueberschrift+'\n'+a.text,'Abschnitt')},'Abschnitt kopieren')),
+        h('div',{class:'knoepfe'},h('button',{class:'btn',type:'button',onclick:()=>copyText(a.ueberschrift+'\n'+a.text,'Abschnitt')},'Text kopieren'),
+          n.html?h('button',{class:'btn',type:'button',onclick:()=>{const b=blockHtml(n,a);b?copyText(b,'HTML-Block'):toast('Dieser Artikel ist im HTML-Code nicht eindeutig zu finden. Bitte den gesamten HTML-Code kopieren.',6000)}},'HTML kopieren'):null),
         canAct?(sel.length?h('div',{class:'raster'},h('label',{class:'feld'},'In neue Ausgabe übernehmen',s),h('div',{style:'display:flex;align-items:flex-end'},h('button',{class:'btn primary',type:'button',onclick:()=>uebernehmen(n,a,s.value)},'Als Entwurf übernehmen'))):h('span',{class:'muted'},'Zum Übernehmen zuerst im Versandplan eine Ausgabe anlegen.')):null));
     });
+    if(!n.html&&canAct)el.append(htmlFeld(n));
+    if(n.html&&htmlOpen.has(n.id))el.append(h('div',{class:'tb'},h('h4',{},'Versendete Fassung (Vorschau)'),h('iframe',{title:'Vorschau des versendeten Newsletters',sandbox:'',srcdoc:n.html,style:'width:100%;height:560px;border:1px solid var(--line);background:#fff'})));
     if(n.abbinder)el.append(h('div',{class:'meta'},'Abbinder: '+n.abbinder));
     if(n.notiz)el.append(h('div',{class:'meta'},'Notiz: '+n.notiz));
   }
   el.append(h('div',{class:'knoepfe'},h('button',{class:'btn','aria-expanded':String(isOpen),onclick:flip},isOpen?'Weniger anzeigen':'Texte ansehen'),
     h('button',{class:'btn',type:'button',onclick:()=>copyText(archivText(n),'Newsletter')},'Newsletter kopieren'),
+    n.html?[h('button',{class:'btn',type:'button',onclick:()=>copyText(n.html,'HTML-Code')},'HTML kopieren'),
+      h('button',{class:'btn',type:'button','aria-pressed':String(htmlOpen.has(n.id)),onclick:()=>{htmlOpen.has(n.id)?htmlOpen.delete(n.id):htmlOpen.add(n.id);aOpen.add(n.id);render()}},htmlOpen.has(n.id)?'Vorschau schließen':'Versendete Fassung ansehen'),
+      h('button',{class:'btn',type:'button',onclick:()=>htmlLaden(n)},'HTML herunterladen')]:null,
     canAct?h('button',{class:'btn'+(n.stilvorbild?' on':''),type:'button','aria-pressed':String(!!n.stilvorbild),onclick:()=>archivUpd(n,{stilvorbild:!n.stilvorbild},n.stilvorbild?'Nicht mehr als Stilvorbild verwendet.':'Wird künftig als Stilvorbild für Textvorschläge verwendet.')},'Stilvorbild'):null,
     canAct?(delIds.has('ar-'+n.id)?[h('button',{class:'btn danger',type:'button',onclick:()=>archivLoeschen(n)},'Wirklich löschen'),h('button',{class:'btn',type:'button',onclick:()=>{delIds.delete('ar-'+n.id);render()}},'Abbrechen')]:
       h('button',{class:'btn danger',type:'button',onclick:()=>{delIds.add('ar-'+n.id);render()}},'Löschen')):null));
@@ -882,12 +1130,13 @@ function archivView(){
   const dk=(k)=>drafts['arch.'+k]!==undefined?drafts['arch.'+k]:'';
   const fl=(k,lab,type)=>{const i=h('input',{id:'arch-'+k,type,oninput:e=>{drafts['arch.'+k]=e.target.value}});i.value=dk(k);return h('label',{class:'feld'},lab,i)};
   const tx=h('textarea',{id:'arch-text','aria-label':'Abschnitte',style:'min-height:220px',placeholder:'Je Abschnitt: erste Zeile Überschrift, darunter der Text. Abschnitte durch eine Zeile mit --- trennen.',oninput:e=>{drafts['arch.text']=e.target.value}});tx.value=dk('text');
+  const hx=h('textarea',{id:'arch-html','aria-label':'Versendeter HTML-Code',style:'min-height:120px',placeholder:'Der HTML-Code, der mit dem Newsletterprogramm verschickt wurde. Eine .html-Datei oben füllt das Feld automatisch.',oninput:e=>{drafts['arch.html']=e.target.value}});hx.value=dk('html');
   const file=h('input',{id:'arch-file',type:'file',accept:'.txt,.md,.html,.htm',onchange:async e=>{
     const f=e.target.files[0];if(!f)return;const raw=await f.text();
     if(/\.html?$/i.test(f.name)){
       const l=abschnitteAusHtml(raw);if(!l.length)return toast('Im HTML keine Überschriften (h2) gefunden. Bitte den Text einfügen.');
       const doc=new DOMParser().parseFromString(raw,'text/html'),t=(doc.querySelector('h1')||{}).textContent;
-      drafts['arch.text']=abschnitteText(l);if(t&&!drafts['arch.titel'])drafts['arch.titel']=t.replace(/\s+/g,' ').trim();
+      drafts['arch.text']=abschnitteText(l);drafts['arch.html']=raw;if(t&&!drafts['arch.titel'])drafts['arch.titel']=t.replace(/\s+/g,' ').trim();
       const m=f.name.match(/(\d{4})-(\d{2})-(\d{2})/);if(m&&!drafts['arch.datum'])drafts['arch.datum']=m[0];
       toast(l.length+' Abschnitte gelesen. Bitte prüfen, Name und Datum ergänzen und ablegen.',6000);
     }else drafts['arch.text']=raw;
@@ -902,7 +1151,7 @@ function archivView(){
       st?h('div',{class:'abruf'},h('b',{},'Üblicher Aufbau'),h('span',{},'Ø '+st.abschnitte+' Abschnitte je Newsletter'),h('span',{},'Ø '+st.woerter+' Wörter je Abschnitt'),h('span',{},'Überschriften Ø '+st.ueberschrift+' Wörter')):null),
     aForm&&canAct?h('div',{class:'formular'},h('h2',{},'Newsletter ablegen'),
       h('div',{class:'raster'},fl('name','Name','text'),fl('datum','Versanddatum','date'),h('div',{class:'breit'},fl('titel','Titel oder Schwerpunkte (optional)','text')),
-        h('label',{class:'feld breit'},'Abschnitte',tx),h('label',{class:'feld breit'},'Datei lesen (.html, .txt, .md)',file)),
+        h('label',{class:'feld breit'},'Abschnitte',tx),h('label',{class:'feld breit'},'Datei lesen (.html, .txt, .md)',file),h('label',{class:'feld breit'},'Versendeter HTML-Code (wird unverändert gespeichert)',hx)),
       h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:archivAnlegen},'Im Archiv ablegen'),h('button',{class:'btn',type:'button',onclick:()=>{aForm=false;render()}},'Abbrechen'))):null,
     h('div',{class:'wliste'},
       !aLoaded?h('p',{class:'leer'},'Lade Archiv …'):null,
@@ -934,13 +1183,30 @@ async function termSpeichern(a){
 }
 const termLoeschen=a=>schreiben(async()=>{await db.doc('ausgaben/'+a.id).delete();delIds.delete('t-'+a.id);termEdit.delete(a.id)},'Ausgabe gelöscht.');
 /* Versendet: freigegebene Texte wandern als Newsletter ins Archiv, die Ausgabe verschwindet aus Planung und Zuordnung */
+/* Abschluss: Der versendete HTML-Code aus dem Newsletterprogramm ist Pflicht und wird unverändert archiviert (Feld `html`).
+   Die Abschnitte werden bevorzugt aus diesem HTML gelesen, sonst aus dem Gesamttext, zuletzt aus den freigegebenen Einzeltexten. */
+function versandForm(a){
+  const k='vs.'+a.id,ph=phaseOf(a),frueh=!!ph&&PHASEN.findIndex(p=>p[0]===ph)<PHASEN.findIndex(p=>p[0]==='test2');
+  const t=h('textarea',{id:'vs-'+a.id,'aria-label':'Versendeter HTML-Code',style:'min-height:160px',placeholder:'HTML-Code einfügen, genau so, wie er mit dem Newsletterprogramm versendet wurde.',oninput:e=>{drafts[k]=e.target.value}});t.value=drafts[k]||'';
+  const file=h('input',{type:'file',accept:'.html,.htm','aria-label':'HTML-Datei wählen',onchange:async e=>{const f=e.target.files[0];if(f){drafts[k]=await f.text();render()}}});
+  return h('div',{class:'senden'},h('strong',{},'Als versendet ins Archiv ablegen'),
+    h('div',{},'Der HTML-Code, der mit dem Newsletterprogramm versendet wurde, wird unverändert im Archiv gespeichert. Die Ausgabe verschwindet danach aus Versandplan und Zuordnung.'),
+    frueh?h('div',{class:'warn warn-k'},'Der Status steht erst auf „'+phaseLabel(ph)+'“. Nach dem Ablauf kommt das Archiv erst nach dem zweiten Testversand und dem finalen Versand.'):null,
+    h('label',{class:'feld'},'Versendeter HTML-Code',t),h('label',{class:'feld'},'oder HTML-Datei',file),
+    h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>alsVersendet(a)},'Ins Archiv legen'),h('button',{class:'btn',type:'button',onclick:()=>{delIds.delete('v-'+a.id);render()}},'Abbrechen')));
+}
 function alsVersendet(a){
-  const ab=inAusgabe(a.id).filter(c=>c.tb&&c.tb.freigegeben).map(c=>({ueberschrift:c.tb.ueberschrift||c.titel||'',text:c.tb.kurztext||'',linkText:c.tb.linkText||'',url:''}));
-  if(!ab.length)return toast('Ohne freigegebene Texte lässt sich die Ausgabe nicht ins Archiv legen.');
+  const html=(drafts['vs.'+a.id]||'').trim();
+  if(!html)return toast('Bitte den versendeten HTML-Code einfügen.');
+  if(!/<(html|body|table|div|p)\b/i.test(html))return toast('Das sieht nicht nach HTML-Code aus.');
+  let ab=abschnitteAusHtml(html);
+  if(!ab.length&&a.gesamt&&Array.isArray(a.gesamt.abschnitte))ab=a.gesamt.abschnitte.map(x=>({ueberschrift:x.ueberschrift||'',text:x.text||'',linkText:x.linkText||'',url:x.url||''}));
+  if(!ab.length)ab=inAusgabe(a.id).filter(c=>c.tb&&c.tb.freigegeben).map(c=>({ueberschrift:c.tb.ueberschrift||c.titel||'',text:c.tb.kurztext||'',linkText:c.tb.linkText||'',url:''}));
+  if(!ab.length)return toast('Im HTML sind keine Überschriften (h2) zu finden und es gibt keinen Gesamttext. Bitte den Code prüfen.',6000);
   return schreiben(async()=>{
-    await db.doc('archiv/v-'+a.id).set({name:a.name,versanddatum:a.versanddatum||heuteBerlin(),titel:'',einleitung:'',abschnitte:ab,abbinder:'',stilvorbild:false,notiz:a.notiz||'',quelle:'ausgabe',ausgabeId:a.id,erfasstAm:nowIso()});
+    await db.doc('archiv/v-'+a.id).set({name:a.name,versanddatum:a.versanddatum||heuteBerlin(),titel:'',einleitung:(a.gesamt&&a.gesamt.intro)||'',abschnitte:ab,html,abbinder:'',stilvorbild:false,notiz:a.notiz||'',termine:Array.isArray(a.termine)?a.termine:[],quelle:'ausgabe',ausgabeId:a.id,erfasstAm:nowIso()});
     await db.doc('ausgaben/'+a.id).update({status:'versendet',versendetAm:nowIso()});
-    delIds.delete('v-'+a.id);
+    delIds.delete('v-'+a.id);delete drafts['vs.'+a.id];
   },'Im Archiv abgelegt. Die Ausgabe ist aus dem Versandplan genommen.');
 }
 function termKarte(a){
@@ -951,21 +1217,20 @@ function termKarte(a){
     h('span',{class:'pill'+(ueber?' bad':a.versanddatum?' neu':' warn')},a.versanddatum?datTag(a.versanddatum)+(a.versandzeit?', '+a.versandzeit+' Uhr':''):'Termin offen'),
     a.versanddatum&&!ueber?h('span',{class:'muted'},tage===0?'heute':tage===1?'morgen':'in '+tage+' Tagen'):null,
     ueber?h('span',{class:'muted'},'Termin überschritten'):null));
-  el.append(h('h3',{},a.name),h('div',{class:'meta'},l.length+(l.length===1?' Thema':' Themen')+' · '+fr+' Texte freigegeben'));
+  el.append(h('h3',{},a.name),h('div',{class:'meta'},l.length+(l.length===1?' Thema':' Themen')+' · '+fr+' Texte freigegeben'+(phaseOf(a)?' · Status: '+phaseLabel(phaseOf(a)):' · noch kein Status')));
   if(a.notiz)el.append(h('p',{},a.notiz));
   if(ueber)el.append(h('div',{class:'warn crit'},'Das Versanddatum ist vorbei. Termin ändern oder die Ausgabe als versendet ins Archiv legen.'));
   if(!a.versanddatum)el.append(h('div',{class:'warn warn-k'},'Für diese Ausgabe ist noch kein Versandtermin eingetragen.'));
   if(editing&&canAct)el.append(h('div',{class:'formular',style:'margin:0'},terminFelder(a.id,{name:a.name,datum:a.versanddatum,zeit:a.versandzeit,notiz:a.notiz}),
     h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>termSpeichern(a)},'Termin speichern'),h('button',{class:'btn',type:'button',onclick:()=>{termEdit.delete(a.id);['name','datum','zeit','notiz'].forEach(k=>delete drafts[a.id+'.'+k]);render()}},'Abbrechen'))));
   if(canAct){
-    if(delIds.has('v-'+a.id))el.append(h('div',{class:'senden'},h('strong',{},'Als versendet ablegen?'),h('div',{},fr+(fr===1?' freigegebener Text wird':' freigegebene Texte werden')+' als Newsletter im Archiv abgelegt. Die Ausgabe verschwindet aus Versandplan und Zuordnung.'),
-      h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:()=>alsVersendet(a)},'Ja, ins Archiv'),h('button',{class:'btn',type:'button',onclick:()=>{delIds.delete('v-'+a.id);render()}},'Abbrechen'))));
+    if(delIds.has('v-'+a.id))el.append(versandForm(a));
     el.append(h('div',{class:'knoepfe'},
       h('button',{class:'btn',type:'button',onclick:()=>{termEdit.has(a.id)?termEdit.delete(a.id):termEdit.add(a.id);render()}},editing?'Bearbeitung schließen':'Termin ändern'),
-      h('button',{class:'btn',type:'button',disabled:!fr,onclick:()=>{delIds.add('v-'+a.id);render()}},'Als versendet ins Archiv'),
+      h('button',{class:'btn',type:'button',disabled:!l.length,onclick:()=>{delIds.add('v-'+a.id);render()}},'Als versendet ins Archiv'),
       !l.length?(delIds.has('t-'+a.id)?[h('button',{class:'btn danger',type:'button',onclick:()=>termLoeschen(a)},'Wirklich löschen'),h('button',{class:'btn',type:'button',onclick:()=>{delIds.delete('t-'+a.id);render()}},'Abbrechen')]:
         h('button',{class:'btn danger',type:'button',onclick:()=>{delIds.add('t-'+a.id);render()}},'Löschen')):null));
-    if(!fr)el.append(h('div',{class:'meta'},'Ins Archiv legen geht, sobald mindestens ein Text freigegeben ist.'));
+    if(!l.length)el.append(h('div',{class:'meta'},'Ins Archiv legen geht, sobald Themen zugeordnet sind. Dafür wird der versendete HTML-Code gebraucht.'));
   }
   return el;
 }
@@ -990,23 +1255,244 @@ function termineView(){
 const kpT=()=>{const h0=heuteBerlin(),n=aktiv().filter(a=>a.versanddatum&&a.versanddatum>=h0).sort((x,y)=>x.versanddatum.localeCompare(y.versanddatum))[0];
   return[[aktiv().length,'Ausgaben in Planung'],[n?fmtD.format(new Date(n.versanddatum+'T12:00:00')):'–','Nächster Versand'],[aktiv().filter(a=>!a.versanddatum).length,'Ohne Termin'],[aktiv().filter(a=>a.versanddatum&&a.versanddatum<h0).length,'Termin überschritten']]};
 const kpA=()=>[[archiv.length,'Newsletter im Archiv'],[archiv.reduce((s,n)=>s+abschnitteOf(n).length,0),'Abschnitte'],[archiv.filter(n=>n.stilvorbild).length,'Stilvorbilder']];
+/* ---- Chat: ein gemeinsamer Verlauf für Andreas und Moritz (Logik wie im Sekretariat, ohne Bezug auf Einträge) ----
+   Sammlung `chat`, je Nachricht: text, von, wann, erwaehnt (Namen), thread (ID der ersten Nachricht, wenn es eine Antwort ist, sonst leer), angelegt.
+   Nachrichten werden nur angelegt, nie geändert. Antworten stehen wie in Slack eingerückt unter der ersten Nachricht.
+   Sammlung `chatGelesen`: ein Dokument je Person (ID = Name), bis = Zeit der letzten gelesenen Nachricht.
+   Gelesen gilt, sobald die Person den Reiter ansieht; die Linie "Neu seit deinem letzten Besuch" bleibt bis zum Verlassen des Reiters stehen. */
+let chat=[],chatLoaded=false,chatLoadError='',chatGel={},chatGelLoaded=false,chatFilter='alle',chatQ='',chatLimit=100;
+let chatEntry=null,chatSaving=false,chatStick=true,chatScroll=0,chatSprung=false,chatRefocus='',chatGelSaving='',erwSel=0;
+let chatIdx=new Map(),chatRep=new Map();
+const thOpen=new Set(),thForm=new Set();
+const ymdF=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin'});
+const fmtUhr=new Intl.DateTimeFormat('de-DE',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'});
+const fmtTagLang=new Intl.DateTimeFormat('de-DE',{weekday:'long',day:'numeric',month:'long',timeZone:'Europe/Berlin'});
+const dayKey=v=>{const d=new Date(v);return v&&!isNaN(d)?ymdF.format(d):''};
+const nachZeit=(a,b)=>(a.wann||'').localeCompare(b.wann||'')||String(a.id).localeCompare(String(b.id));
+const ck=(key,k)=>'chat.'+k+(key?'@'+key:'');
+const istAntwort=m=>!!m.thread&&chatIdx.has(m.thread);
+function chatIndex(){
+  chatIdx=new Map(chat.map(m=>[m.id,m]));chatRep=new Map();
+  chat.filter(istAntwort).sort(nachZeit).forEach(m=>{if(!chatRep.has(m.thread))chatRep.set(m.thread,[]);chatRep.get(m.thread).push(m)});
+}
+const chatBis=()=>(chatGel[me]||{}).bis||'';
+/* Für mich: ich bin erwähnt, oder es ist eine Antwort auf meine Nachricht */
+const chatFuerMich=m=>!!me&&m.von!==me&&((Array.isArray(m.erwaehnt)&&m.erwaehnt.includes(me))||(istAntwort(m)&&chatIdx.get(m.thread).von===me));
+const chatUngelesen=m=>!!me&&m.von!==me&&(m.wann||'')>chatBis();
+/* Filter zählen Unterhaltungen (erste Nachricht mit ihren Antworten), der Reiter zählt einzelne neue Nachrichten */
+function chatStats(){
+  const s={alle:0,fuermich:0,neu:0,neuFuerMich:0};
+  chat.forEach(m=>{
+    if(chatUngelesen(m)){s.neu++;if(chatFuerMich(m))s.neuFuerMich++}
+    if(istAntwort(m))return;
+    s.alle++;
+    if([m].concat(chatRep.get(m.id)||[]).some(chatFuerMich))s.fuermich++;
+  });
+  return s;
+}
+const ERW_RE=new RegExp('@('+PERSONEN.join('|')+'|alle)(?![\\p{L}\\d])','giu');
+function erwaehnteIn(text){
+  const n=new Set();
+  for(const x of String(text).matchAll(ERW_RE)){const w=x[1].toLowerCase();if(w==='alle')PERSONEN.forEach(p=>n.add(p));else n.add(PERSONEN.find(p=>p.toLowerCase()===w))}
+  n.delete(me);return [...n];
+}
+function chatTextKnoten(text){
+  const out=[];let last=0;
+  for(const x of String(text).matchAll(ERW_RE)){
+    if(x.index>last)out.push(text.slice(last,x.index));
+    const w=x[1].toLowerCase(),ich=w==='alle'||w===String(me).toLowerCase();
+    out.push(h('span',{class:'at'+(ich?' ich':'')},x[0]));
+    last=x.index+x[0].length;
+  }
+  if(last<text.length)out.push(text.slice(last));
+  return out;
+}
+function visibleChat(){
+  const needle=chatQ.trim().toLowerCase();
+  const passt=m=>[m.text,m.von].join(' ').toLowerCase().includes(needle);
+  return chat.filter(m=>!istAntwort(m)).filter(r=>{
+    const th=[r].concat(chatRep.get(r.id)||[]);
+    return (chatFilter==='fuermich'?th.some(chatFuerMich):true)&&(!needle||th.some(passt));
+  }).sort(nachZeit);
+}
+function chatTagText(key,v){
+  const heute=ymdF.format(new Date()),gestern=ymdF.format(new Date(Date.now()-864e5));
+  if(!key)return 'Ohne Datum';
+  if(key===heute)return 'Heute';
+  if(key===gestern)return 'Gestern';
+  return fmtTagLang.format(new Date(v))+(key.slice(0,4)!==heute.slice(0,4)?' '+key.slice(0,4):'');
+}
+const zeitKurz=v=>!v?'':dayKey(v)===ymdF.format(new Date())?fmtUhr.format(new Date(v)):fmt(v);
+function chatNachricht(m,root){
+  const neuHier=chatEntry&&m.von!==me&&(m.wann||'')>chatEntry.bis,fm=chatFuerMich(m)&&neuHier;
+  const rootId=root?root.id:m.id;
+  return h('li',{class:'chat-m'+(root?' antwort':'')+(fm?' fuer':''),id:'chat-'+m.id},
+    h('span',{class:'chat-av p-'+m.von,'aria-hidden':'true'},String(m.von||'?').slice(0,2).toUpperCase()),
+    h('div',{class:'chat-k'},
+      h('div',{class:'chat-meta'},h('b',{},m.von||'?'),h('span',{class:'t'},m.wann?(root?zeitKurz(m.wann):fmtUhr.format(new Date(m.wann))):''),fm?h('span',{class:'pill neu'},'für dich'):null,
+        canWrite!==false&&me?h('button',{class:'btn small',type:'button','aria-label':'Antworten auf die Nachricht von '+(root?root.von:m.von||''),onclick:()=>chatThreadAuf(rootId)},'Antworten'):null),
+      h('p',{class:'chat-text'},chatTextKnoten(m.text||''))));
+}
+function chatThread(r){
+  const rep=chatRep.get(r.id)||[],offen=thOpen.has(r.id),out=[];
+  if(rep.length){
+    const neuN=rep.filter(m=>chatEntry&&m.von!==me&&(m.wann||'')>chatEntry.bis).length;
+    out.push(h('li',{class:'chat-th-sum'},h('button',{class:'chat-th-btn',type:'button','aria-expanded':String(offen),
+        onclick:()=>{offen?thOpen.delete(r.id):thOpen.add(r.id);chatStick=false;render()}},
+      [...new Set(rep.map(m=>m.von))].map(p=>h('span',{class:'chat-av mini p-'+p,'aria-hidden':'true'},String(p).slice(0,2).toUpperCase())),
+      h('span',{},rep.length+(rep.length===1?' Antwort':' Antworten')),
+      neuN?h('span',{class:'pill neu'},neuN+' neu'):null,
+      h('span',{class:'t'},offen?'ausblenden':'zuletzt '+zeitKurz(rep[rep.length-1].wann)))));
+  }
+  if(offen){
+    let ziel=false;
+    rep.forEach(m=>{
+      const li=chatNachricht(m,r);
+      if(!ziel&&chatEntry&&m.von!==me&&(m.wann||'')>chatEntry.bis){ziel=true;li.classList.add('neu-ziel')}
+      out.push(li);
+    });
+    if(canWrite!==false&&me&&thForm.has(r.id))out.push(h('li',{class:'chat-th-form'},chatForm(r)));
+  }
+  return out;
+}
+function fillChat(box){
+  box.replaceChildren();
+  const list=visibleChat();
+  if(!chatLoaded&&!chatLoadError){box.append(h('li',{class:'chat-leer'},h('b',{},'Lade Nachrichten …')));return}
+  if(!chat.length){box.append(h('li',{class:'chat-leer'},h('b',{},'Noch keine Nachrichten'),'Schreibe unten die erste Nachricht. Andreas und Moritz sehen sie sofort.'));return}
+  if(!list.length){box.append(h('li',{class:'chat-leer'},h('b',{},'Nichts in dieser Ansicht'),chatQ.trim()?'Zu "'+chatQ.trim()+'" gibt es keinen Treffer in diesem Filter.':'Wähle oben einen anderen Filter.'));return}
+  const zeig=list.slice(-chatLimit);
+  if(list.length>zeig.length)box.append(h('li',{style:'align-self:center'},h('button',{class:'btn small',type:'button',onclick:()=>{chatLimit+=100;chatStick=false;render()}},'Ältere Nachrichten anzeigen ('+(list.length-zeig.length)+')')));
+  let tag='',linie=false;
+  zeig.forEach(m=>{
+    const k=dayKey(m.wann);
+    if(!linie&&chatEntry&&m.von!==me&&(m.wann||'')>chatEntry.bis){linie=true;box.append(h('li',{class:'chat-neu neu-ziel',id:'chat-neu'},h('span',{class:'pill neu'},'Neu seit deinem letzten Besuch')))}
+    if(k!==tag){tag=k;box.append(h('li',{class:'chat-tag'},chatTagText(k,m.wann)))}
+    box.append(chatNachricht(m));
+    chatThread(m).forEach(x=>box.append(x));
+  });
+}
+function chatScrollen(box){
+  requestAnimationFrame(()=>{
+    if(!box.isConnected)return;
+    const neu=chatSprung&&box.querySelector('.neu-ziel');
+    if(neu)box.scrollTop=Math.max(0,neu.offsetTop-box.offsetTop-8);
+    else box.scrollTop=chatStick?box.scrollHeight:chatScroll;
+    chatSprung=false;
+    const a=document.activeElement;
+    if(a&&box.contains(a)){const r=(a.closest('li')||a).getBoundingClientRect(),bb=box.getBoundingClientRect();if(r.bottom>bb.bottom)box.scrollTop+=r.bottom-bb.bottom+8;else if(r.top<bb.top)box.scrollTop-=bb.top-r.top+8}
+    chatScroll=box.scrollTop;chatStick=box.scrollTop+box.clientHeight>=box.scrollHeight-24;
+  });
+}
+async function chatGelesenSetzen(){
+  if(!db||canWrite===false||!me||view!=='chat'||!chatGelLoaded||document.visibilityState==='hidden')return;
+  const last=chat.filter(m=>m.von!==me).reduce((x,m)=>(m.wann||'')>x?m.wann:x,'');
+  if(!last||last<=chatBis()||chatGelSaving===last)return;
+  chatGelSaving=last;
+  try{await db.doc('chatGelesen/'+me).set({person:me,bis:last,geaendert:nowIso()})}catch(e){chatGelSaving=''}
+}
+function chatThreadAuf(rootId){
+  thOpen.add(rootId);thForm.add(rootId);chatStick=false;chatRefocus='chat-th-'+rootId;render();
+}
+async function chatSenden(root){
+  const key=root?root.id:'',text=(drafts[ck(key,'text')]||'').trim();
+  if(!me)return toast('Bitte oben zuerst auswählen, wer du bist.');
+  if(!text)return toast('Bitte eine Nachricht schreiben.');
+  if(!db)return toast('Die Datenbank ist nicht erreichbar.');
+  if(chatSaving)return;
+  chatSaving=true;
+  const id='ch-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t=nowIso();
+  const doc={text,von:me,wann:t,erwaehnt:erwaehnteIn(text),thread:key,angelegt:t};
+  delete drafts[ck(key,'text')];
+  if(root){thOpen.add(key);chatStick=false}else chatStick=true;
+  chatRefocus=root?'chat-th-'+key:'chat-text';render();
+  try{await db.doc('chat/'+id).set(doc)}
+  catch(e){drafts[ck(key,'text')]=text;toast('Senden nicht möglich. Dein Text ist noch da, bitte noch einmal versuchen.',6000)}
+  finally{chatSaving=false}
+}
+const enterSendet=()=>!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
+function erwOptionen(ta){
+  const m=ta.value.slice(0,ta.selectionStart).match(/(^|\s)@(\p{L}*)$/u);
+  if(!m)return [];
+  const q=m[2].toLowerCase();
+  return PERSONEN.filter(n=>n!==me).concat(['alle']).filter(n=>n.toLowerCase().startsWith(q));
+}
+function erwZeigen(ta,box){
+  const opts=erwOptionen(ta);
+  box.hidden=!opts.length;
+  erwSel=Math.min(erwSel,Math.max(opts.length-1,0));
+  box.replaceChildren(...opts.map((n,i)=>h('button',{type:'button',role:'option','aria-selected':String(i===erwSel),onmousedown:e=>e.preventDefault(),onclick:()=>erwEinsetzen(ta,box,n)},n==='alle'?'alle (Andreas und Moritz)':n)));
+  return opts;
+}
+function erwEinsetzen(ta,box,n){
+  const pos=ta.selectionStart,vor=ta.value.slice(0,pos).replace(/@\p{L}*$/u,'@'+n+' ');
+  ta.value=vor+ta.value.slice(pos);ta.dispatchEvent(new Event('input'));
+  ta.focus();ta.setSelectionRange(vor.length,vor.length);
+  erwSel=0;box.hidden=true;box.replaceChildren();
+}
+function chatForm(root){
+  const key=root?root.id:'';
+  const erw=h('div',{class:'chat-erw',role:'listbox','aria-label':'Person ansprechen',hidden:true});
+  const ta=h('textarea',{id:root?'chat-th-'+key:'chat-text','aria-label':root?'Antwort an '+(root.von||''):'Nachricht',rows:root?'2':'3',
+    placeholder:root?'Antworten … mit @ eine Person ansprechen':'Nachricht schreiben … mit @ eine Person ansprechen',
+    oninput:e=>{drafts[ck(key,'text')]=e.target.value;if(e.isTrusted){erwSel=0;erwZeigen(e.target,erw)}},
+    onkeydown:e=>{
+      if(!erw.hidden){
+        const opts=erwOptionen(ta);
+        if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();erwSel=(erwSel+(e.key==='ArrowDown'?1:opts.length-1))%opts.length;erwZeigen(ta,erw);return}
+        if((e.key==='Enter'||e.key==='Tab')&&opts.length){e.preventDefault();erwEinsetzen(ta,erw,opts[erwSel]);return}
+        if(e.key==='Escape'){e.preventDefault();erw.hidden=true;return}
+      }
+      if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&enterSendet()){e.preventDefault();ta.blur();chatSenden(root)}
+    },
+    onblur:()=>{erw.hidden=true}});
+  ta.value=drafts[ck(key,'text')]||'';
+  const senden=h('button',{class:'btn small primary',type:'button',disabled:chatSaving,onmousedown:e=>e.preventDefault(),onclick:()=>{ta.blur();chatSenden(root)}},root?'Antworten':'Senden');
+  if(root)return h('div',{class:'chat-form th'},erw,ta,h('div',{class:'zr',style:'justify-content:flex-end'},
+    h('button',{class:'btn small',type:'button',onclick:()=>{thForm.delete(key);if(!(chatRep.get(key)||[]).length)thOpen.delete(key);chatStick=false;render()}},'Schließen'),senden));
+  return h('div',{class:'chat-form'},erw,ta,
+    h('div',{class:'zr'},
+      h('span',{class:'muted',style:'font-size:13px'},'Sichtbar für Andreas und Moritz.'+(enterSendet()?' Enter sendet, Umschalt und Enter für eine neue Zeile.':'')),
+      senden));
+}
+function chatMain(){
+  const s=chatStats(),FL=[['alle','Alle ('+s.alle+')'],['fuermich','Für mich ('+s.fuermich+')']];
+  const box=h('ol',{class:'chat-list',id:'chatlist','aria-label':'Nachrichten',onscroll:e=>{const x=e.currentTarget;chatScroll=x.scrollTop;chatStick=x.scrollTop+x.clientHeight>=x.scrollHeight-24}});
+  fillChat(box);
+  const q=h('input',{id:'chatsuche',type:'search',placeholder:'Nachrichten durchsuchen','aria-label':'Chat durchsuchen',value:chatQ,oninput:e=>{chatQ=e.target.value;chatStick=true;const b=document.getElementById('chatlist');fillChat(b);chatScrollen(b)}});
+  const m=h('main',{class:'gutter chat-wrap'},
+    chatLoadError?h('div',{class:'warn crit',role:'alert'},chatLoadError):null,
+    !me?h('div',{class:'warn warn-k'},'Wähle oben bei „Ich bin“ deinen Namen, um zu schreiben und neue Nachrichten als gelesen zu markieren.'):null,
+    h('div',{class:'chips',role:'group','aria-label':'Filter Chat'},FL.map(([k,t])=>h('button',{class:'btn'+(chatFilter===k?' on':''),type:'button','aria-pressed':String(chatFilter===k),onclick:()=>{chatFilter=k;chatStick=true;render()}},t))),
+    h('div',{class:'chat-suche'},q),
+    h('section',{class:'chat','aria-label':'Chat'},box,
+      canWrite===false?h('p',{class:'muted',style:'padding:12px 16px;margin:0;font-size:13px'},'Zum Schreiben braucht die Seite für dich die Stufe "Contributor".'):me?chatForm():null));
+  chatScrollen(box);
+  setTimeout(chatGelesenSetzen,0);
+  return m;
+}
 function render(){
   const a=document.activeElement,id=a&&a.id,pos=a&&a.selectionStart,sc=document.querySelector('.liste'),st=sc?sc.scrollTop:0;
   const app=document.getElementById('app');app.textContent='';
+  if(view!=='chat'||!me)chatEntry=null;
+  else if(chatLoaded&&chatGelLoaded&&(!chatEntry||chatEntry.me!==me)){
+    chatEntry={me,bis:chatBis()};chatStick=true;chatSprung=true;
+    chatRep.forEach((rep,id)=>{if(rep.some(m=>m.von!==me&&(m.wann||'')>chatEntry.bis))thOpen.add(id)});
+  }
   const echte=items.filter(c=>status(c)!=='beobachtung'),unz=items.filter(c=>!ausgabeId(c));
   const mails=items.filter(c=>c.quelle==='mail').map(c=>c.erfasstAm).sort(),letzter=mails.length?dat(mails[mails.length-1],true):'noch kein Abruf';
   const count=fn=>unz.filter(fn).length;
   const chips=[['alle','Alle ('+unz.length+')'],['mail','Mail ('+count(c=>c.typ==='mail')+')'],['document','Datei ('+count(c=>c.typ==='document')+')'],['link','Web ('+count(c=>c.typ==='link')+')'],['note','Notiz ('+count(c=>c.typ==='note')+')'],['beobachtung','Beobachtung ('+count(c=>status(c)==='beobachtung')+')']];
   const shown=unz.filter(c=>filter==='alle'||(filter==='beobachtung'?status(c)==='beobachtung':c.typ===filter)).sort((x,y)=>RANK[status(x)]-RANK[status(y)]||(y.erfasstAm||'').localeCompare(x.erfasstAm||''));
-  const ws=wstats(),kpW=[[aeFrei().filter(aeNeu).length,'Neue Änderungen'],[ws.fuermich,'Neu für mich'],[ws.offen,'Offene Wünsche'],[ws.erledigt,'Erledigt'],[ws.bewaehrt,'Bewährt? offen']];
+  const ws=wstats(),cs=chatStats(),kpW=[[aeFrei().filter(aeNeu).length,'Neue Änderungen'],[ws.fuermich,'Neu für mich'],[ws.offen,'Offene Wünsche'],[ws.erledigt,'Erledigt'],[ws.bewaehrt,'Bewährt? offen']];
   const kp=[[echte.filter(c=>!ausgabeId(c)).length,'Im Eingangskorb'],[echte.filter(c=>aktiv().some(a=>a.id===ausgabeId(c))).length,'Einer Ausgabe zugeordnet'],[echte.filter(c=>c.hinweisText).length,'Themen mit Hinweis'],[items.filter(c=>status(c)==='beobachtung').length,'In Beobachtung']];
   app.append(
     h('header',{class:'kopf gutter'},h('div',{},h('div',{class:'over'},'Newsletter-Redaktion'),h('h1',{},'Themen sammeln, Ausgaben planen'),h('p',{class:'sub'},'Stand '+dat(new Date().toISOString())+' · Daten aus dem Themenspeicher')),h('img',{src:LOGO_D,alt:'BdKEP'})),
     h('div',{class:'tabs gutter',role:'group','aria-label':'Bereich'},
-      [['eingang','Eingangskorb'],['termine','Versandplan'+(aktiv().length?' ('+aktiv().length+')':'')],['archiv','Archiv'+(archiv.length?' ('+archiv.length+')':'')],['wuensche','Wünsche'+(ws.fuermich?' ('+ws.fuermich+' neu für dich)':ws.offen?' ('+ws.offen+' offen)':'')]].map(([k,t])=>h('button',{class:'btn'+(view===k?' on':''),type:'button','aria-pressed':String(view===k),onclick:()=>{view=k;lsSet('nl.view',k);render()}},t)),
+      [['chat','Chat'+(cs.neu?' ('+cs.neu+' neu)':'')],['eingang','Eingangskorb'],['termine','Versandplan'+(aktiv().length?' ('+aktiv().length+')':'')],['archiv','Archiv'+(archiv.length?' ('+archiv.length+')':'')],['wuensche','Wünsche'+(ws.fuermich?' ('+ws.fuermich+' neu für dich)':ws.offen?' ('+ws.offen+' offen)':'')]].map(([k,t])=>h('button',{class:'btn'+(view===k?' on':''),type:'button','aria-pressed':String(view===k),onclick:()=>{view=k;lsSet('nl.view',k);render()}},t)),
       h('label',{class:'person'},'Ich bin',h('select',{id:'ich-bin','aria-label':'Ich bin',onchange:e=>{me=e.target.value;lsSet('nl.me',me);render()}},h('option',{value:''},'bitte wählen'),PERSONEN.map(n=>h('option',{value:n,selected:n===me},n))))),
-    h('section',{class:'kpis gutter'},(view==='wuensche'?kpW:view==='termine'?kpT():view==='archiv'?kpA():kp).map(([v,l])=>h('div',{class:'kpi'},h('div',{class:'v'},String(v)),h('div',{class:'l'},l)))),
-    view==='wuensche'?wuenscheView():view==='archiv'?archivView():view==='termine'?termineView():h('main',{class:'gutter'},
+    h('section',{class:'kpis gutter',hidden:view==='chat'},(view==='chat'?[]:view==='wuensche'?kpW:view==='termine'?kpT():view==='archiv'?kpA():kp).map(([v,l])=>h('div',{class:'kpi'},h('div',{class:'v'},String(v)),h('div',{class:'l'},l)))),
+    view==='chat'?chatMain():view==='wuensche'?wuenscheView():view==='archiv'?archivView():view==='termine'?termineView():h('main',{class:'gutter einspaltig'},
       h('section',{class:'links'},
         h('div',{class:'sec-head'},
           h('div',{class:'sec-top'},h('h2',{},'Eingangskorb'),h('span',{class:'muted'},shown.length+(shown.length===1?' Eintrag':' Einträge')+' in dieser Ansicht')),
@@ -1025,10 +1511,11 @@ function render(){
           h('div',{class:'knoepfe'},h('button',{class:'btn primary',type:'button',onclick:neueAusgabe},'Ausgabe anlegen'),h('button',{class:'btn',type:'button',onclick:()=>{newIssue=false;render()}},'Abbrechen'))):
           h('button',{class:'btn',type:'button',style:'align-self:flex-start',onclick:()=>{newIssue=true;render()}},'Ausgabe anlegen'),
         h('p',{class:'hinweis-fuss'},'Die Reihenfolge in einer Ausgabe bestimmt die Reihenfolge im Newsletter. Vorschau und Export als HTML folgen in der nächsten Stufe.'))),
-    canWrite!==false&&!(view==='wuensche'&&wForm)?h('button',{class:'fab',type:'button','aria-label':'Wunsch eintragen',title:'Wunsch eintragen',onclick:wunschSchnell},h('span',{class:'plus','aria-hidden':'true'},'+'),h('span',{class:'txt'},'Wunsch')):null,
+    canWrite!==false&&view!=='chat'&&!(view==='wuensche'&&wForm)?h('button',{class:'fab',type:'button','aria-label':'Wunsch eintragen',title:'Wunsch eintragen',onclick:wunschSchnell},h('span',{class:'plus','aria-hidden':'true'},'💡'),h('span',{class:'txt'},'Wunsch')):null,
     toastMsg?h('div',{class:'toast',role:'status'},toastMsg):null);
   const l2=document.querySelector('.liste');if(l2)l2.scrollTop=st;
   if(id){const e=document.getElementById(id);if(e){e.focus();try{if(pos!=null)e.setSelectionRange(pos,pos)}catch(_){}}}
+  if(chatRefocus){const el=view==='chat'&&document.getElementById(chatRefocus);chatRefocus='';if(el){el.focus({preventScroll:true});el.setSelectionRange(el.value.length,el.value.length)}}
 }
 render();
 (async()=>{
@@ -1038,6 +1525,8 @@ render();
     db=await claude.use('db');
     if(!db){loaded=true;render();toast('Anmeldung nötig, um den Eingangskorb zu laden.');return}
     db.collection('quellen').onSnapshot(s=>{items=s.docs.map(d=>({id:d.id,...d.data()}));loaded=true;render()},()=>{loaded=true;toast('Eingangskorb nicht ladbar.')});
+    db.collection('chat').onSnapshot(s=>{chat=s.docs.map(d=>({id:d.id,...d.data()}));chatIndex();chatLoaded=true;chatLoadError='';render()},e=>{chatLoaded=true;chatLoadError='Der Chat kann nicht geladen werden ('+(e&&e.code||'Fehler')+').';render()});
+    db.collection('chatGelesen').onSnapshot(s=>{chatGel={};s.docs.forEach(d=>{chatGel[d.id]=d.data()});chatGelLoaded=true;render()},()=>{chatGelLoaded=true;render()});
     db.collection('wuensche').onSnapshot(s=>{wunsch=s.docs.map(d=>({id:d.id,...d.data()}));wLoaded=true;wLoadError='';render()},e=>{wLoaded=true;wLoadError='Die Wünsche können nicht geladen werden ('+(e&&e.code||'Fehler')+').';render()});
     db.collection('aenderungen').onSnapshot(s=>{aend=s.docs.map(d=>({id:d.id,...d.data()}));render()},()=>{});
     db.collection('besuche').onSnapshot(s=>{besuche={};s.docs.forEach(d=>{besuche[d.id]=d.data()});render()},()=>{});
@@ -1046,4 +1535,5 @@ render();
   }catch(e){loaded=true;render()}
 })();
 </script>
+
 
